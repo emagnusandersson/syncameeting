@@ -12,6 +12,15 @@ tDDOSBan=5; // tDDOSBan: How long in seconds til the blocking is lifted
 
 
 
+//
+// Endpoint urls for the IdP.
+//
+strFBVersion="v9.0"
+UrlOAuth={fb:"https://www.facebook.com/"+strFBVersion+"/dialog/oauth", google:"https://accounts.google.com/o/oauth2/v2/auth"}
+UrlToken={fb:"https://graph.facebook.com/"+strFBVersion+"/oauth/access_token", google:"https://accounts.google.com/o/oauth2/token"}
+UrlGraph={fb:"https://graph.facebook.com/"+strFBVersion+"/me", google:"https://www.googleapis.com/plus/v1/people/me"};
+strIPPrim='fb';
+
 
 strBTC='1abcdefghijklmnopqrstuvwxyzABCDEFG'; // Bitcoin address
 ppStoredButt="ABCDEFGHIJKLM"; 

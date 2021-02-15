@@ -12,14 +12,14 @@
     "concat-stream": "2.0.0",
     "formidable": "1.2.2",
     "ip": "1.1.5",
+    "mime": "x",
     "minimist": "1.2.5",
     "mysql": "2.18.1",
     "node-zip": "1.1.1",
-    "redis": "3.0.2",
+    "redis": "3.1.2",
     "request": "2.88.2",
-    "serialize-javascript": "4.0.0",
-    "streamify-string": "1.0.1",
-    "mime": "x"
+    "serialize-javascript": "6.0.0",
+    "streamify-string": "1.0.1"
   },
   "devDependencies": {},
   "private": true,

@@ -40,14 +40,15 @@ headHelp:'<p>Need an identity (to discourage vandalism)</p><p>Only your Facebook
 min:'Min',
 max:'Max',
 
-// time units [singularShort, pluralShort, singularLong, pluralLong]
+// time units [[singularShort, pluralShort], [singularLong, pluralLong]]
 timeUnit:{
-s:['s','s','second','seconds'],
-min:['min','min','minute','minutes'],
-h:['h','h','hour','hours'],
-d:['d','d','day','days'],
-mon:['mon','mon','month','months'],
-y:['y','y','year','years']},
+s:[['s','s'],['second','seconds']],
+m:[['min','min'],['minute','minutes']],
+h:[['h','h'],['hour','hours']],
+d:[['d','d'],['day','days']],
+M:[['mo','mo'],['month','months']],
+y:[['y','y'],['year','years']]
+},
 
 timePref:{
 ts:'+',

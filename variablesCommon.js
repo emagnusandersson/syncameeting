@@ -19,6 +19,9 @@ leafSiteSpecific='siteSpecific.js';
 leafLogin="login.html";
 leafLoginBack="loginBack.html";
 leafManifest='manifest.json';
+leafDataDelete='dataDelete';
+leafDataDeleteStatus='dataDeleteStatus';
+leafDeAuthorize='deAuthorize';
 
 
 

@@ -178,12 +178,9 @@ app.copySomeToArr=function(arr, obj, arrSome){
   return arr;
 }
 
-// 
-// JQuery
-//
 
-//isSetObject=function(obj){return !jQuery.isEmptyObject(obj);} // {}, null => false
 app.isSetObject=function(obj){if(typeof obj!='object' || obj===null) return false;   return Boolean(Object.keys(obj).length); } // {}, null => false
+
 
 //
 // Date
@@ -196,42 +193,24 @@ app.UTC2Readable=function(utcTime){ var tmp=new Date(Number(utcTime)*1000);   tm
 Date.prototype.toUnix=function(){return Math.round(this.valueOf()/1000);}
 Date.prototype.toISOStringMy=function(){return this.toISOString().substr(0,19);}
 app.unixNow=function(){return (new Date()).toUnix();}
-app.approxTimeDuration=function(sWhole,boLong,boArr){  
-  if(typeof boLong !='undefined' && boLong==1) {} else boLong=0;
-  if(typeof boArr !='undefined' && boArr==1) {} else boArr=0;
-  var unit=langHtml['timeUnit'];
-  var n, ii, j1=0; j2=1; if(boLong==1) {j1=2; j2=3;} 
-  aSWhole=Math.abs(sWhole);
-  if(aSWhole>60*60*24*365*2) {n=Math.round(sWhole/(60*60*24*365)); ii='y';} //
-  else if(aSWhole>60*60*24*2) {n=Math.round(sWhole/(60*60*24)); ii='d';}
-  else if(aSWhole>60*60*2) {n=Math.round(sWhole/(60*60)); ii='h';}
-  else if(aSWhole>60*2) {n=Math.round(sWhole/60); ii='min';}
-  else {n=sWhole; units=unit['s'][j1]; ii='s';}
-  var units=unit[ii][j1]; if(n!=1) units=unit[ii][j2];
-  if(boArr==1) return Array(n,units); else return n+' '+units;
+app.getSuitableTimeUnit=function(t){ // t in seconds
+  var tAbs=Math.abs(t), tSign=t>=0?+1:-1;
+  if(tAbs<=90) return [tSign*tAbs,'s'];
+  tAbs/=60; // t in minutes
+  if(tAbs<=90) return [tSign*tAbs,'m']; 
+  tAbs/=60; // t in hours
+  if(tAbs<=36) return [tSign*tAbs,'h'];
+  tAbs/=24; // t in days
+  if(tAbs<=2*365) return [tSign*tAbs,'d'];
+  tAbs/=365; // t in years
+  return [tSign*tAbs,'y'];
+}
+app.getSuitableTimeUnitStr=function(tdiff,objLang=langHtml.timeUnit,boLong=0,boArr=0){
+  var [ttmp,u]=getSuitableTimeUnit(tdiff), n=Math.round(ttmp);
+  var strU=objLang[u][boLong][Number(n!=1)];
+  if(boArr){  return [n,strU];  } else{  return n+' '+strU;   }
 }
 
-app.UTC2ReadableDiff=function(utcTime,curTime,dirDiffSign,boLong,boArr){
-  var ttmp=utcTime-curTime;  ttmp=dirDiffSign*ttmp; 
-  if(typeof boLong !='undefined' && boLong==1) {} else boLong=0;
-  if(typeof boArr !='undefined' && boArr==1) {} else boArr=0;
-  var tmp;  tmp=approxTimeDuration(ttmp,boLong,boArr);
-  
-  if(boArr==1) {
-    return tmp;
-  }
-  else {
-    if(ttmp<0) tmp='-';
-    return tmp;
-  }
-}
-
-app.UTC2ReadableTmp=function(utcTime,curTime,boUseDiff, dirDiffSign){
-  var tmp; 
-  if(boUseDiff) { tmp=UTC2ReadableDiff(utcTime,curTime,dirDiffSign); }
-  else {tmp=UTC2Readable(utcTime); }
-  return tmp;
-}
 
 
 //
@@ -281,3 +260,26 @@ app.deserialize=function(serializedJavascript){
   return eval('(' + serializedJavascript + ')');
 }
 
+app.b64UrlDecode=function(b64UrlString, boUint8Array=false){  // boUint8Array==true => output is in Uint8Array
+  const padding='='.repeat((4-b64UrlString.length%4) % 4);
+  const base64=(b64UrlString+padding).replace(/\-/g, '+').replace(/_/g, '/');
+
+  //const rawData=window.atob(base64);
+  const rawData=Buffer.from(base64, 'base64').toString();
+  if(!boUint8Array) return rawData;
+  const outputArray=new Uint8Array(rawData.length);
+
+  for(let i=0; i<rawData.length; ++i){ outputArray[i]=rawData.charCodeAt(i); }
+  return outputArray;
+}
+
+
+//
+// Escaping data
+//
+
+app.myJSEscape=function(str){return str.replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+  // myAttrEscape
+  // Only one of " or ' must be escaped depending on how it is wrapped when on the client.
+app.myAttrEscape=function(str){return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/\//g,"&#47;");} // This will keep any single quataions.
+app.myLinkEscape=function(str){ str=myAttrEscape(str); if(str.startsWith('javascript:')) str='javascript&#58;'+str.substr(11); return str; }

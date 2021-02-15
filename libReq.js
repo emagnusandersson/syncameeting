@@ -23,9 +23,6 @@ var mesEOMakeJSON=function(glue){ return function(err){
 
 
 
-
-
-
 /******************************************************************************
  * reqIndex
  ******************************************************************************/
@@ -208,46 +205,6 @@ uuid=`+JSON.stringify(uuid)+`;
 
 
 /******************************************************************************
- * reqStatic
- ******************************************************************************/
-app.reqStatic=function*() {
-  var {req, res}=this;
-  var {flow, siteName, pathName}=req;
-
-  //var RegAllowedOriginOfStaticFile=[RegExp("^https\:\/\/(closeby\.market|gavott\.com)")];
-  //var RegAllowedOriginOfStaticFile=[RegExp("^http\:\/\/(localhost|192\.168\.0)")];
-  var RegAllowedOriginOfStaticFile=[];
-  setAccessControlAllowOrigin(req, res, RegAllowedOriginOfStaticFile);
-  if(req.method=='OPTIONS'){ res.end(); return ;}
-
-  var eTagIn=getETag(req.headers);
-  var keyCache=pathName; if(pathName==='/'+leafSiteSpecific || pathName==='/'+leafManifest) keyCache=siteName+keyCache;
-  if(!(keyCache in CacheUri)){
-    var filename=pathName.substr(1);
-    var [err]=yield* readFileToCache(flow, filename);
-    if(err) {
-      if(err.code=='ENOENT') {res.out404(); return;}
-      if('host' in req.headers) console.error('Faulty request from'+req.headers.host);
-      if('Referer' in req.headers) console.error('Referer:'+req.headers.Referer);
-      res.out500(err); return;
-    }
-  }
-  var {buf, type, eTag, boZip, boUglify}=CacheUri[keyCache];
-  if(eTag===eTagIn){ res.out304(); return; }
-  var mimeType=MimeType[type];
-  if(typeof mimeType!='string') console.log('type: '+type+', mimeType: ', mimeType);
-  if(typeof buf!='object' || !('length' in buf)) console.log('typeof buf: '+typeof buf);
-  if(typeof eTag!='string') console.log('typeof eTag: '+eTag);
-  var objHead={"Content-Type": mimeType, "Content-Length":buf.length, ETag: eTag, "Cache-Control":"public, max-age=31536000"};
-  if(boZip) objHead["Content-Encoding"]='gzip';
-  res.writeHead(200, objHead); // "Last-Modified": maxModTime.toUTCString(),
-  res.write(buf); //, this.encWrite
-  res.end();
-}
-
-
-
-/******************************************************************************
  * ReqLoginBack
  ******************************************************************************/
 //app.ReqLoginBack=function(req, res){
@@ -295,7 +252,7 @@ ReqLoginBack.prototype.go=function*(){
   var uLoginBack=req.uSite+"/"+leafLoginBack;
 
   if(req.objQS.state==this.sessionLogin.state) {
-    var uToGetToken = "https://graph.facebook.com/v4.0/oauth/access_token?"+"client_id="+req.rootDomain.fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&client_secret="+req.rootDomain.fb.secret+"&code="+code;
+    var uToGetToken=UrlToken.fb+"?client_id="+req.rootDomain.fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&client_secret="+req.rootDomain.fb.secret+"&code="+code;
     var reqStream=requestMod.get(uToGetToken); 
 
     var semCB=0, semY=0,  buf, myConcat=concat(function(bufT){ buf=bufT; if(semY) flow.next(); semCB=1;  });    reqStream.pipe(myConcat);    if(!semCB){semY=1; yield}
@@ -347,8 +304,7 @@ ReqLoginBack.prototype.go=function*(){
 ReqLoginBack.prototype.getGraph=function*(){
   var req=this.req, flow=req.flow, res=this.res;
   
-    // With the access_token you can get the data about the user
-  var uGraph = "https://graph.facebook.com/v4.0/me?access_token="+this.access_token+'&fields=id,name';  //  ,verified
+  var uGraph=UrlGraph.fb+"?access_token="+this.access_token+'&fields=id,name';  //  ,verified
   var reqStream=requestMod.get(uGraph);
   var buf, myConcat=concat(function(bufT){ buf=bufT; flow.next();  });    reqStream.pipe(myConcat);    yield;
   var objGraph=JSON.parse(buf.toString());
@@ -399,7 +355,122 @@ else {
 }
 
 
+
+/******************************************************************************
+ * reqDataDelete   // From IdP
+ ******************************************************************************/
+
+function parseSignedRequest(signedRequest, secret) {
+  var [b64UrlMac, b64UrlPayload] = signedRequest.split('.', 2);
+  //var mac = b64UrlDecode(b64UrlMac);
+  var payload = b64UrlDecode(b64UrlPayload),  data = JSON.parse(payload);
+  var b64ExpectedMac = crypto.createHmac('sha256', secret).update(b64UrlPayload).digest('base64');
+  var b64UrlExpectedMac=b64ExpectedMac.replace(/\+/g, '-').replace(/\//g, '_').replace('=', '');
+  if (b64UrlMac !== b64UrlExpectedMac) {
+    return [Error('Invalid mac: ' + b64UrlMac + '. Expected ' + b64UrlExpectedMac)];
+  }
+  return [null,data];
+}
+
+
+app.deleteOne=function*(user_id){ // 
+  var {req}=this, {flow, site}=req, {userTab}=site.TableName;
+  var Ou={};
+
+  var Sql=[], Val=[];
+  Sql.push("DELETE FROM "+userTab+" WHERE idIP=?;"); Val.push(user_id);
+  var sql=Sql.join('\n');
+  var [err, results]=yield* this.myMySql.query(flow, sql, Val); if(err) return [err];
+  var c=results.affectedRows;
+
+  return [null, c];
+}
+
+app.reqDataDelete=function*(){  //
+  var {req, res}=this;
+  var {flow, objQS, uSite, siteName}=req;
+
+  //if(req.method=='GET' && boDbg){ var objUrl=url.parse(req.url), qs=objUrl.query||'', strData=qs; } else 
+  if(req.method=='POST'){
+    //var strData=yield* app.getPost.call(this, req.flow, req);
+    var buf, myConcat=concat(function(bufT){ buf=bufT; flow.next();  });    req.pipe(myConcat);    yield;
+    var strData=buf.toString();
+  }
+  else {res.outCode(400, "Post request wanted"); return; }
   
+  var Match=strData.match(/signed_request=(.*)/); if(!Match) {res.outCode(400, "String didn't start with \"signed_request=\""); return; }
+  var strDataB=Match[1];
+
+  var [err, data]=parseSignedRequest(strDataB, req.rootDomain.fb.secret); if(err) { res.outCode(400, "Error in parseSignedRequest: "+err.message); return; }
+  var {user_id}=data;
+
+  var [err,c]=yield* deleteOne.call(this, user_id);
+  if(c==1) var strPlur='entry'; else var strPlur='entries';
+  var mess='User: '+user_id+': '+c+' '+strPlur+' deleted';
+  
+  console.log('reqDataDelete: '+mess);
+  var confirmation_code=genRandomString(32);
+  yield *setRedis(flow, confirmation_code+'_DeleteRequest', mess, timeOutDeleteStatusInfo); //3600*24*30
+
+  res.setHeader('Content-Type', MimeType.json); 
+  res.end(JSON.stringify({ url: uSite+'/'+leafDataDeleteStatus+'?confirmation_code='+confirmation_code, confirmation_code }));
+}
+
+app.reqDataDeleteStatus=function*(){
+  var {req, res}=this;
+  var {flow, site, objQS, uSite}=req;
+  var objUrl=url.parse(req.url), qs=objUrl.query||'', objQS=querystring.parse(qs);
+  var confirmation_code=objQS.confirmation_code||'';
+  var [err,mess]=yield* cmdRedis(flow, 'GET', [confirmation_code+'_DeleteRequest']); 
+  if(err) {var mess=err.message;}
+  else if(mess==null) {
+    var [t,u]=getSuitableTimeUnit(timeOutDeleteStatusInfo);
+    //var mess="The delete status info is only available for "+t+u+".\nAll delete requests are handled immediately. So if you pressed delete, you are deleted.";
+    var mess="No info of deletion status found, (any info is deleted "+t+u+" after the deletion request).";
+  }
+  res.end(mess);
+}
+
+
+
+/******************************************************************************
+ * reqStatic
+ ******************************************************************************/
+app.reqStatic=function*() {
+  var {req, res}=this;
+  var {flow, siteName, pathName}=req;
+
+  //var RegAllowedOriginOfStaticFile=[RegExp("^https\:\/\/(closeby\.market|gavott\.com)")];
+  //var RegAllowedOriginOfStaticFile=[RegExp("^http\:\/\/(localhost|192\.168\.0)")];
+  var RegAllowedOriginOfStaticFile=[];
+  setAccessControlAllowOrigin(req, res, RegAllowedOriginOfStaticFile);
+  if(req.method=='OPTIONS'){ res.end(); return ;}
+
+  var eTagIn=getETag(req.headers);
+  var keyCache=pathName; if(pathName==='/'+leafSiteSpecific || pathName==='/'+leafManifest) keyCache=siteName+keyCache;
+  if(!(keyCache in CacheUri)){
+    var filename=pathName.substr(1);
+    var [err]=yield* readFileToCache(flow, filename);
+    if(err) {
+      if(err.code=='ENOENT') {res.out404(); return;}
+      if('host' in req.headers) console.error('Faulty request to '+req.headers.host+" ("+pathName+")");
+      if('Referer' in req.headers) console.error('Referer:'+req.headers.Referer);
+      res.out500(err); return;
+    }
+  }
+  var {buf, type, eTag, boZip, boUglify}=CacheUri[keyCache];
+  if(eTag===eTagIn){ res.out304(); return; }
+  var mimeType=MimeType[type];
+  if(typeof mimeType!='string') console.log('type: '+type+', mimeType: ', mimeType);
+  if(typeof buf!='object' || !('length' in buf)) console.log('typeof buf: '+typeof buf);
+  if(typeof eTag!='string') console.log('typeof eTag: '+eTag);
+  var objHead={"Content-Type": mimeType, "Content-Length":buf.length, ETag: eTag, "Cache-Control":"public, max-age=31536000"};
+  if(boZip) objHead["Content-Encoding"]='gzip';
+  res.writeHead(200, objHead); // "Last-Modified": maxModTime.toUTCString(),
+  res.write(buf); //, this.encWrite
+  res.end();
+}
+
 
 /******************************************************************************
  * SetupSql

@@ -13,7 +13,7 @@ querystring = require('querystring');
 //async = require('async');
 formidable = require("formidable");
 crypto = require('crypto');
-tls=require('tls');
+//tls=require('tls');
 childProcess = require('child_process');
 zlib = require('zlib');
 //Fiber = require('fibers');
@@ -259,10 +259,13 @@ var flow=( function*(){
         //var redisVar=req.sessionID+'_Login', tmp=wrapRedisSendCommand('set',[redisVar,JSON.stringify(objT)]);     var tmp=wrapRedisSendCommand('expire',[redisVar,300]);
         yield *setRedis(req.flow, req.sessionID+'_Login', objT, 300);
         var uLoginBack=uDomain+"/"+leafLoginBack;
-        var uTmp="http://www.facebook.com/v4.0/dialog/oauth?"+"client_id="+req.rootDomain.fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&state="+state+'&display=popup';
+        var uTmp=UrlOAuth.fb+"?client_id="+req.rootDomain.fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&state="+state+'&display=popup';
         res.writeHead(302, {'Location': uTmp}); res.end();
       }
       else if(pathName=='/'+leafLoginBack){    var reqLoginBack=new ReqLoginBack(objReqRes);    yield* reqLoginBack.go();    }
+      else if(pathName=='/'+leafDataDelete){  yield* reqDataDelete.call(objReqRes);  }
+      else if(pathName=='/'+leafDataDeleteStatus){  yield* reqDataDeleteStatus.call(objReqRes);  }
+      //else if(pathName=='/'+leafDeAuthorize){  yield* reqDeAuthorize.call(objReqRes);  }
       else if(pathName=='/createDumpCommand'){  var str=createDumpCommand(); res.out200(str);     }
       else if(pathName=='/debug'){    debugger;  res.end();}
       else if(pathName=='/'+googleSiteVerification) res.end('google-site-verification: '+googleSiteVerification);
