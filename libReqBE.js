@@ -42,31 +42,32 @@ ReqBE.prototype.mesEO=function(errIn, statusCode=500){
 
 
 
-//ReqBE.prototype.clearSessionCache=function*(){
+//ReqBE.prototype.clearSessionCache=async function (){
   //this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-  //yield *setRedis(flow, req.sessionID+'_Cache', this.sessionCache, maxUnactivity);
+  //var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity); if(err) return [err];
   //this.GRet.userInfoFrDBUpd=extend({},specialistDefault);
 //}
 
-ReqBE.prototype.specSetup=function*(inObj){
-  var req=this.req, flow=req.flow, Ou={};
+ReqBE.prototype.specSetup=async function (inObj){
+  var {req}=this, Ou={};
   var Role=null; if(typeof inObj=='object' && 'Role' in inObj) Role=inObj.Role;
   //if(!checkIfUserInfoFrIP()) { callback(null,[Ou]); return } 
-  var boOK=yield* checkIfUserInfoFrIP.call(this);  if(!boOK) { return [null, [Ou]];} 
+  var [err,boOK]=await checkIfUserInfoFrIP.call(this);   if(err) return [err];
+  if(!boOK) { return [null, [Ou]];} 
   var tmp=this.sessionCache.userInfoFrIP, IP=tmp.IP, idIP=tmp.idIP;
 
-  var [err, result]=yield* runIdIP.call(this, flow, IP, idIP);
+  var [err, result]=await runIdIP.call(this, IP, idIP); if(err) return [err];
   extend(this.GRet.userInfoFrDBUpd,result);    extend(this.sessionCache.userInfoFrDB,result);
   
   //setSessionMain.call(this);
   //if(!this.checkIfAnySpecialist()){this.clearSession();} // If the user once clicked login, but never saved anything then logout
   //callback(null,[Ou]);
   
-  yield *setRedis(flow, req.sessionID+'_Cache', this.sessionCache, maxUnactivity);
+  var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity); if(err) return [err];
   if(!checkIfAnySpecialist.call(this)){ // If the user once clicked login, but never saved anything then logout
-    //yield *clearSessionCache.call(this);
+    //await clearSessionCache.call(this);
     this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-    yield *setRedis(flow, req.sessionID+'_Cache', this.sessionCache, maxUnactivity);
+    var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity); if(err) return [err];
     this.GRet.userInfoFrDBUpd=extend({},specialistDefault);
   } 
   return [null, [Ou]];
@@ -74,17 +75,17 @@ ReqBE.prototype.specSetup=function*(inObj){
 
 
 
-ReqBE.prototype.logout=function*(inObj){
-  var req=this.req, flow=req.flow;
+ReqBE.prototype.logout=async function (inObj){
+  var {req}=this, flow=req.flow;
   //resetSessionMain.call(this);
   this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-  yield *setRedis(flow, req.sessionID+'_Cache', this.sessionCache, maxUnactivity);
+  var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity); if(err) return [err];
   this.GRet.userInfoFrDBUpd=extend({},specialistDefault);
   this.mes('Logged out'); return [null, [0]];
 }
 
-ReqBE.prototype.getSchedule=function*(inObj){
-  var req=this.req, flow=req.flow, site=req.site, siteName=req.siteName;
+ReqBE.prototype.getSchedule=async function (inObj){
+  var {req}=this, {site}=req;
   var scheduleTab=site.TableName.scheduleTab;
   var Ou={}, Sql=[];
  
@@ -94,34 +95,36 @@ ReqBE.prototype.getSchedule=function*(inObj){
   FROM `+scheduleTab+` WHERE uuid=?;`);  //BIN_TO_UUID(uuid) AS uuid  // UUID_TO_BIN(?)
 
   var sql=Sql.join('\n'),   Val=[inObj.uuid];
-  var [err, results]=yield* this.myMySql.query(flow, sql, Val); if(err) return [err];
+  var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
   var c=results[1].length; if(c!=1) {  return [new ErrorClient(c+" rows found for that uuid")];}
   Ou.row=results[1][0];  
   return [null, [Ou]];
 }
 
-ReqBE.prototype.listSchedule=function*(inObj){
-  var req=this.req, flow=req.flow, site=req.site, siteName=req.siteName, sessionCache=this.sessionCache, {userTab, scheduleTab}=site.TableName;
+ReqBE.prototype.listSchedule=async function (inObj){
+  var {req}=this, {site}=req, sessionCache=this.sessionCache, {userTab, scheduleTab}=site.TableName;
   var Ou={}, Sql=[];
   
   if(!isSetObject(sessionCache.userInfoFrIP)){ return [null,[Ou]]; }
 
   Ou.tab=[];
+  Sql.push("DELETE FROM "+scheduleTab+" WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();");
   Sql.push("SELECT uuid, title, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(lastActivity) AS lastActivity FROM "+scheduleTab+" s JOIN "+userTab+" u ON s.idUser=u.idUser WHERE u.IP=? AND u.idIP=?;");  // BIN_TO_UUID(uuid) AS uuid
   
   var sql=Sql.join('\n'),   Val=[sessionCache.userInfoFrIP.IP, sessionCache.userInfoFrIP.idIP];  //Val=[idUser]; 
-  var [err, results]=yield* this.myMySql.query(flow, sql, Val); if(err) return [err];
-  var n=results.length;
+  var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
+  var arrSchedule=results[1];
+  var n=arrSchedule.length;
   for(var i=0;i<n;i++) {
-    var row=results[i], len=listCol.KeyCol.length, rowN=Array(len);
+    var row=arrSchedule[i], len=listCol.KeyCol.length, rowN=Array(len);
     for(var j=0;j<len;j++){ var key=listCol.KeyCol[j]; rowN[j]=row[key]; }
     Ou.tab.push(rowN);
   }   
   return [null, [Ou]];
 }
 
-ReqBE.prototype.saveSchedule=function*(inObj){
-  var req=this.req, flow=req.flow, site=req.site, siteName=req.siteName, sessionCache=this.sessionCache;
+ReqBE.prototype.saveSchedule=async function (inObj){
+  var {req}=this, {site, siteName}=req, sessionCache=this.sessionCache;
   var scheduleTab=site.TableName.scheduleTab;
   var Ou={}, Sql=[];
 
@@ -143,7 +146,7 @@ ReqBE.prototype.saveSchedule=function*(inObj){
 
   Sql.push("CALL "+siteName+"save(?,?,?,?, ?,?,?,?,?,?,?,?,?);");
   var sql=Sql.join('\n'); 
-  var [err, results]=yield* this.myMySql.query(flow, sql, Val); if(err) return [err];
+  var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
   var len=results.length; 
   if(len==2){
     var strTmp=results[0][0].mess; if(results[0][0].mess=='boOld') {strTmp="Someone else has changed the table, use reload to get the latest version";  } 
@@ -157,8 +160,8 @@ ReqBE.prototype.saveSchedule=function*(inObj){
 
 }
 
-ReqBE.prototype.deleteSchedule=function*(inObj){
-  var req=this.req, flow=req.flow, site=req.site, siteName=req.siteName, sessionCache=this.sessionCache, {userTab, scheduleTab}=site.TableName;
+ReqBE.prototype.deleteSchedule=async function (inObj){
+  var {req}=this, {site, siteName}=req, sessionCache=this.sessionCache, {userTab, scheduleTab}=site.TableName;
   var Ou={}, Sql=[];
 
   if(isSetObject(sessionCache.userInfoFrIP)){
@@ -167,7 +170,7 @@ ReqBE.prototype.deleteSchedule=function*(inObj){
     Sql.push("CALL "+siteName+"delete(?,?,?);");
     var Val=[]; Val.push(IP, idIP, uuid);
     var sql=Sql.join('\n'); 
-    var [err, results]=yield* this.myMySql.query(flow, sql, Val); if(err) return [err];
+    var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
     var len=results.length, rowLast=results[len-2];
     if('mess' in rowLast) { return [new ErrorClient(rowLast.mess)]; }
     var nDelete=results[0][0].nDelete; if(nDelete!=1) { return [new ErrorClient(nDelete+" schedules deleted")]; }
@@ -180,18 +183,18 @@ ReqBE.prototype.deleteSchedule=function*(inObj){
 
 
 
-ReqBE.prototype.go=function*(){
-  var req=this.req, flow=req.flow, res=this.res, site=req.site;
+ReqBE.prototype.go=async function (){
+  var {req, res}=this, {site}=req;
 
   var redisVar=req.sessionID+'_Cache';
-  this.sessionCache=yield* getRedis(flow, redisVar,1);
+  var [err, val]=await getRedis(redisVar,1);  if(err) {this.mesEO(err);  return; }    this.sessionCache=val;
   if(!this.sessionCache || typeof this.sessionCache!='object') { 
     //resetSessionMain.call(this);
     this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-    yield *setRedis(flow, redisVar, this.sessionCache, maxUnactivity);
+    var [err]=await setRedis(redisVar, this.sessionCache, maxUnactivity); if(err){ this.mesEO(err); return;}
   }
 
-  var tmp=yield* expireRedis(flow, redisVar, maxUnactivity);
+  var [err]=await expireRedis(redisVar, maxUnactivity); if(err){ this.mesEO(err); return;}
   
   
   var jsonInput;
@@ -200,21 +203,20 @@ ReqBE.prototype.go=function*(){
       var form = new formidable.IncomingForm();
       form.multiples = true;  
 
+      var [err, fields, files]=await new Promise(resolve=>{  form.parse(req, (...arg)=>resolve(arg));  });     if(err){ this.mesEO(err); return; } 
 
-      var err, fields, files;
-      form.parse(req, function(errT, fieldsT, filesT) { err=errT; fields=fieldsT; files=filesT; flow.next();  });  yield;  if(err){ this.mesEO(err);  return; } 
-      
       this.File=files['fileToUpload[]'];
       if('kind' in fields) this.kind=fields.kind; else this.kind='s';
       if(!(this.File instanceof Array)) this.File=[this.File];
       jsonInput=fields.vec;
       
     }else{
-      var buf, myConcat=concat(function(bufT){ buf=bufT; flow.next();  });    req.pipe(myConcat);    yield;
+      var [err,buf]=await new Promise(resolve=>{  var myConcat=concat(bT=>resolve([null,bT]));    req.pipe(myConcat);  });
       jsonInput=buf.toString();
     }
   }
   else if(req.method=='GET'){
+    this.mesEO(new Error('No GET requests please.'));  return; 
     var objUrl=url.parse(req.url), qs=objUrl.query||''; jsonInput=urldecode(qs);
   }
 
@@ -257,12 +259,12 @@ ReqBE.prototype.go=function*(){
   var redisVar=req.sessionID+'_CSRFCode'+ucfirst(caller), CSRFCode;
   if(boCheckCSRF){
     if(!CSRFIn){ this.mesO('CSRFCode not set (try reload page)'); return;}
-    var tmp=yield* getRedis(flow, redisVar);
-    if(CSRFIn!==tmp){ this.mesO('CSRFCode err (try reload page)'); return;}
+    var [err, CSRFStored]=await getRedis(redisVar); if(err) {this.mesEO(err);  return; }
+    if(CSRFIn!==CSRFStored){ this.mesO('CSRFCode err (try reload page)'); return;}
   }
   if(boSetNewCSRF){
     var CSRFCode=randomHash();
-    var tmp=yield* setRedis(flow, redisVar, CSRFCode, maxUnactivity);
+    var [err]=await setRedis(redisVar, CSRFCode, maxUnactivity); if(err){ this.mesEO(err); return;}
     this.GRet.CSRFCode=CSRFCode;
   }
 
@@ -278,7 +280,7 @@ ReqBE.prototype.go=function*(){
   }
   
   for(var k=0; k<Func.length; k++){
-    var [func,inObj]=Func[k],   [err, result]=yield* func.call(this, inObj);
+    var [func,inObj]=Func[k],   [err, result]=await func.call(this, inObj);
     if(res.finished) return;
     else if(err){
       if(typeof err=='object' && err.name=='ErrorClient') this.mesO(err); else this.mesEO(err);     return;

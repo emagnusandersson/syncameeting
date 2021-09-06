@@ -1,6 +1,6 @@
 
 "use strict"
-app.runIdIP=function*(flow, IP, idIP){ //check  idIP against the user-table and return diverse data
+app.runIdIP=async function(IP, idIP){ //check  idIP against the user-table and return diverse data
   var siteName=this.req.siteName, site=this.site, TableName=site.TableName, userTab=TableName.userTab;
   var nArg=arguments.length, callback=arguments[nArg-1];
   var userInfoFrDBUpd={};
@@ -8,18 +8,18 @@ app.runIdIP=function*(flow, IP, idIP){ //check  idIP against the user-table and 
   var Sql=[];
   Sql.push("SELECT * FROM "+userTab+" WHERE IP=? AND idIP=?;");
   var sql=Sql.join('\n'), Val=[IP, idIP];
-  var [err, results]=yield* this.myMySql.query(flow, sql, Val); if(err) return [err];
+  var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
   var c=results.length;   userInfoFrDBUpd.customer=c==1?results[0]:0;   if(c>1){ console.log("count>1 ("+c+")"); }
   return [null, userInfoFrDBUpd]; 
 }
 
 
-app.checkIfUserInfoFrIP=function*(){ 
-  if('userInfoFrIP' in this.sessionCache && 'IP' in this.sessionCache.userInfoFrIP){ return true; }
+app.checkIfUserInfoFrIP=async function(){ 
+  if('userInfoFrIP' in this.sessionCache && 'IP' in this.sessionCache.userInfoFrIP){ return [null,true]; }
   else{ 
     this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-    yield *setRedis(this.req.flow, this.req.sessionID+'_Cache', this.sessionCache, maxUnactivity);
-    return false;
+    var [err]=await setRedis(this.req.sessionID+'_Cache', this.sessionCache, maxUnactivity);  if(err) return [err];
+    return [null,false];
   }
 }
 app.checkIfAnySpecialist=function(){
@@ -28,16 +28,16 @@ app.checkIfAnySpecialist=function(){
 }
 
 
-app.createSiteSpecificClientJSAll=function*(flow) {
+app.createSiteSpecificClientJSAll=async function() {
   for(var i=0;i<SiteName.length;i++){
     var siteName=SiteName[i];
     var buf=createSiteSpecificClientJS(siteName);
     var keyCache=siteName+'/'+leafSiteSpecific;
-    var [err]=yield *CacheUri.set(flow, keyCache, buf, 'js', true, true); if(err) return [err];
+    var [err]=await CacheUri.set(keyCache, buf, 'js', true, true); if(err) return [err];
 
     var buf=createManifest(siteName);
     var keyCache=siteName+'/'+leafManifest;
-    var [err]=yield *CacheUri.set(flow, keyCache, buf, 'json', true, true); if(err) return [err];
+    var [err]=await CacheUri.set(keyCache, buf, 'json', true, true); if(err) return [err];
   }
   return [null];
 }
@@ -69,7 +69,7 @@ var createSiteSpecificClientJS=function(siteName) {
 
 app.createManifest=function(siteName){
   var site=Site[siteName], {wwwSite, icons}=site;
-  var uSite="https://"+site.wwwSite;
+  var uSite="https://"+wwwSite;
   let objOut={theme_color:"#ff0", background_color:"#fff", display:"minimal-ui", prefer_related_applications:false, short_name:siteName, name:siteName, start_url: uSite, icons }
 
   //let str=serialize(objOut);
@@ -77,18 +77,16 @@ app.createManifest=function(siteName){
   return str;
 }
 
-app.createManifestNStoreToCache=function*(flow, siteName){
+app.createManifestNStoreToCache=async function(siteName){
   var strT=createManifest(siteName);
   var buf=Buffer.from(strT, 'utf8');
-  var [err]=yield* CacheUri.set(flow, siteName+'/'+leafManifest, buf, 'json', true, false);   if(err) return [err];
+  var [err]=await CacheUri.set(siteName+'/'+leafManifest, buf, 'json', true, false);   if(err) return [err];
   return [null];
 }
-app.createManifestNStoreToCacheMult=function*(flow, SiteName){
+app.createManifestNStoreToCacheMult=async function(SiteName){
   for(var i=0;i<SiteName.length;i++){
-    var [err]=yield* createManifestNStoreToCache(flow, SiteName[i]);   if(err) return [err];
+    var [err]=await createManifestNStoreToCache(SiteName[i]);   if(err) return [err];
   }
   return [null];
 }
-
-
 

@@ -122,33 +122,7 @@ history.fastBack=function(viewGoal, boRefreshHash){
 //
 // spanMessageTextCreate
 //
- 
-//var spanMessageTextCreate=function(){
-  //var el=createElement('span');
-  //var spanInner=createElement('span');
-  //el.appendChild(spanInner, imgBusy)
-  //el.resetMess=function(time){
-    //clearTimeout(messTimer);
-    //if(typeof time =='number') { messTimer=setTimeout('resetMess()',time*1000); return; }
-    //spanInner.myText(' ');
-    //imgBusy.hide();
-  //}
-  //el.setMess=function(str,time,boRot){
-    //spanInner.myText(str);
-    //clearTimeout(messTimer);
-    //if(typeof time =='number')     messTimer=setTimeout('resetMess()',time*1000);
-    //imgBusy.toggle(Boolean(boRot));
-  //};
-  //el.setHtml=function(str,time,boRot){
-    //spanInner.myHtml(str);
-    //clearTimeout(messTimer);
-    //if(typeof time =='number')     messTimer=setTimeout('resetMess()',time*1000);
-    //imgBusy.toggle(Boolean(boRot));
-  //};
-  //var messTimer;
-  //el.addClass('message');//.css({'z-index':8100,position:'fixed'});
-  //return el;
-//}
+
 var divMessageTextCreate=function(){
   var spanInner=createElement('span');
   var imgBusyLoc=imgBusy.cloneNode().css({zoom:'65%','margin-left':'0.4em'}).hide();
@@ -193,7 +167,7 @@ var loginInfoToggleStuff=function(){
 }
 
 var loginReturnList=function(){  //   after 'loginbutt'->'loginScreen' or 'delete'->'loginScreen'
-  if(isSetObject(userInfoFrIP)) {var vec=[['listSchedule',{},linkListPop.listScheduleRet]]; majax(oAJAX,vec); }
+  if(isSetObject(userInfoFrIP)) {var vec=[['listSchedule',{},linkListPop.listScheduleRet]]; majax(vec); }
 }
 
 app.loginReturn=function(userInfoFrIPT,userInfoFrDBT,fun,strMess,CSRFCodeT){
@@ -304,7 +278,7 @@ var divLoginInfoExtend=function(el){
   var logoutButt=createElement('button').myText(langHtml.divLoginInfo.logoutButt).css({'margin-left':'auto'});//.css({'float':'right','font-size':'90%'});
   logoutButt.on('click', function(){ 
     userInfoFrIP={}; 
-    var vec=[['logout']];   majax(oAJAX,vec); 
+    var vec=[['logout']];   majax(vec); 
     return false;
   });
   
@@ -559,7 +533,7 @@ var deleteScheduleConfirmPopExtend=function(el){
   el.setVis=function(){ el.show();  return true;}
   el.setup=function(uuidRowT){uuidRow=uuidRowT;}
   el.yes=createElement('button').myText('Yes').on('click', function(){
-    var vec=[['deleteSchedule',{uuid:uuidRow},linkListPop.deleteScheduleRet],['listSchedule',{},linkListPop.listScheduleRet]];   majax(oAJAX,vec);
+    var vec=[['deleteSchedule',{uuid:uuidRow},linkListPop.deleteScheduleRet],['listSchedule',{},linkListPop.listScheduleRet]];   majax(vec);
     if(uuidRow===uuid) uuid='';
     historyBack();
   });
@@ -842,7 +816,7 @@ var scheduleExtend=function(el){
       o.dFilter=JSON.stringify(sch.dFilter);
       setMess('saving',10,1);
       var vec=[['saveSchedule', o, saveScheduleRet],['listSchedule',{},linkListPop.listScheduleRet]]; 
-      majax(oAJAX,vec);  
+      majax(vec);  
     }
     else {
       loginReturn2=function(){
@@ -883,7 +857,7 @@ var scheduleExtend=function(el){
     el.M2Table();
   }
   el.revert=function(){
-    if(uuid) vec[2]=['getSchedule',{uuid:uuid},el.getScheduleRet];   majax(oAJAX,vec); 
+    if(uuid) vec[2]=['getSchedule',{uuid:uuid},el.getScheduleRet];   majax(vec); 
   }
 
 
@@ -920,7 +894,7 @@ var scheduleExtend=function(el){
  *******************************************************************************************************************/
 
 
-var majax=function(trash, vecIn){  // Each argument of vecIn is an array: [serverSideFunc, serverSideFuncArg, returnFunc]
+var majax=function(vecIn){  // Each argument of vecIn is an array: [serverSideFunc, serverSideFuncArg, returnFunc]
   var xhr = new XMLHttpRequest();
   xhr.open('POST', uBE, true);
   xhr.setRequestHeader('X-Requested-With','XMLHttpRequest'); 
@@ -963,7 +937,7 @@ var beRet=function(data,textStatus,jqXHR){
 app.GRet=function(data){
   var tmp;
   //tmp=data.strMessageText;   if(typeof tmp!="undefined") setMess(tmp);
-  tmp=data.strMessageText;   if(typeof tmp!="undefined") {setMess(tmp); if(/error/i.test(tmp)) navigator.vibrate(100);}
+  tmp=data.strMessageText;   if(typeof tmp!="undefined") {setMess(tmp); } //if(/error/i.test(tmp)) navigator.vibrate(100);
   tmp=data.CSRFCode;   if(typeof tmp!="undefined") CSRFCode=tmp; 
   tmp=data.userInfoFrIP; if(typeof tmp!="undefined") {userInfoFrIP=tmp;}
   tmp=data.userInfoFrDBUpd; if(typeof tmp!="undefined") {  for(var key in tmp){ userInfoFrDB[key]=tmp[key]; }   }
@@ -1153,10 +1127,6 @@ elBody.css({margin:'0 0 0 0'});
 
 
 
-var oAJAX={};
-
-
-
 
 var cssDeleteButtonMouseOver={color:'white', 'text-shadow':'-2px 0 red, 2px 0 red, 0 -2px red, 0 2px red, -1px -1px red, 1px 1px red, -1px 1px red, 1px -1px red'};
 var cssDeleteButtonMouseOut={color:'grey', 'text-shadow':''};
@@ -1329,7 +1299,7 @@ var lastActivity=0;
 
 var vec=[['specSetup'],['listSchedule',{},linkListPop.listScheduleRet]];
 if(uuid!==null) vec.push(['getSchedule',{uuid:uuid}, sch.getScheduleRet]);
-majax(oAJAX,vec);
+majax(vec);
 setMess('Fetching data ',0,true);
 
 //loginInfoToggleStuff();

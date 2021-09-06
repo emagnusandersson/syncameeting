@@ -1,56 +1,18 @@
 "use strict"
 
-var app=(typeof window==='undefined')?global:window;
+//var app=(typeof window==='undefined')?global:window;
+var app=globalThis;
 
-
-app.thisChanged=function(func,selfT){return function(){return func.apply(selfT,arguments);}}
-
-app.thisChangedWArg=function(func,selfT,inObj){
-  return function(){ var Arg = Array.prototype.slice.call(arguments); Arg.push(inObj); return func.apply(selfT,Arg);}
-}
-
-
-
-
-app.MyAsync=function(Func,finF){
-  var self=this;
-  if(typeof Func=='undefined') Func=[]; if(typeof finF=='undefined') finF=[]; 
-  this.Func=Func;   this.iSeries=0; this.Res=[]; this.resLast=undefined, this.finF=finF; 
-  this.cb=function(err,res){ 
-    self.storeRes(err,res);
-    self.iSeries++; 
-    //console.log(self.iSeries+'/'+self.Func.length);
-    //if(err) console.log('Err '+err);
-    if(err || self.iSeries>=self.Func.length) {  self.finF(err,self.Res); return;} // console.log('Exit'); 
-    self.Func[self.iSeries](self.cb);
-  };
-}
-MyAsync.prototype.storeRes=function(err,res){ 
-  this.Res[this.iSeries]=res; this.resLast=res;
-};
-MyAsync.prototype.go=function(){
-  this.Func[this.iSeries](this.cb);
-}
-MyAsync.prototype.doneNTrunk=function(err,res){this.Res[this.iSeries]=res;  this.Func=[]; this.iSeries=0; this.finF(err,self.Res);}
-MyAsync.prototype.trunkNoFin=function(){}
-
-
-
-
-
-
-app.getColor = function(val, range) {  var s=100, l=50, a=1,    h = 240-Math.round((240 / range) * val);      return "hsla("+h+","+s+"%,"+l+"%,"+a+")";    };
-
+Promise.prototype.toNBP=function(){   return this.then(a=>{return [null,a];}).catch(e=>{return [e];});   }  // toNodeBackPromise
 
 
 //
 // String
 //
 
-
 app.ucfirst=function(string){  return string.charAt(0).toUpperCase() + string.slice(1);  }
 app.lcfirst=function(string){  return string.charAt(0).toLowerCase() + string.slice(1);  }
-app.isAlpha=function(star){  var regEx = /^[a-zA-Z0-9]+$/;  return str.match(regEx); } 
+app.isAlpha=function(str){  var regEx = /^[a-zA-Z0-9]+$/;  return str.match(regEx); } 
 String.prototype.trim = function() { return this.replace(/^\s+|\s+$/g,"");}
 
 //function pad2(n){ return ('0'+n).slice(-2);}
