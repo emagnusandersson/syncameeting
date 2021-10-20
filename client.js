@@ -857,7 +857,7 @@ var scheduleExtend=function(el){
     el.M2Table();
   }
   el.revert=function(){
-    if(uuid) vec[2]=['getSchedule',{uuid:uuid},el.getScheduleRet];   majax(vec); 
+    if(uuid) vec[2]=['getSchedule',{uuid},el.getScheduleRet];   majax(vec); 
   }
 
 
@@ -997,6 +997,7 @@ var userInfoFrIP=null;
 var CSRFCode='';
 
 
+var {boTLS}=site;
 var strScheme='http'+(boTLS?'s':''),    strSchemeLong=strScheme+'://',    uSite=strSchemeLong+site.wwwSite,     uCommon=strSchemeLong+wwwCommon,       uBE=uSite+"/"+leafBE;
 
 var uBE=uSite+"/"+leafBE;
@@ -1086,8 +1087,6 @@ if(boFF){
 
 
 
-
-langClientFunc(); 
 
 var tmp=createColJIndexNamesObj(listCol.KeyCol); extend(listCol,tmp); extend(window,tmp);
 listCol.sel=createChildInd(listCol.backSel);   
@@ -1298,7 +1297,7 @@ var lastActivity=0;
 //firstAJAXCall();
 
 var vec=[['specSetup'],['listSchedule',{},linkListPop.listScheduleRet]];
-if(uuid!==null) vec.push(['getSchedule',{uuid:uuid}, sch.getScheduleRet]);
+if(uuid!==null) vec.push(['getSchedule',{uuid}, sch.getScheduleRet]);
 majax(vec);
 setMess('Fetching data ',0,true);
 

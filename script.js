@@ -1,55 +1,47 @@
 
-http = require("http");
-https = require('https');
-url = require("url");
-path = require("path");
-fs = require("fs");
-fsPromises = require("fs/promises");
-mysql =  require('mysql');
-util =  require('util');
-concat = require('concat-stream');
-//requestMod = require('request');
-//import fetch from 'node-fetch';
-fetch = require('node-fetch');
+global.app=global;
+import http from "http";
+import https from 'https';
+import url from "url";
+import path from "path";
+import fs, {promises as fsPromises} from "fs";
+import mysql from 'mysql';
+import concat from 'concat-stream';
+import fetch from 'node-fetch';
 
-//through = require('through')
-querystring = require('querystring');
-//async = require('async');
-formidable = require("formidable");
-crypto = require('crypto');
-//tls=require('tls');
-childProcess = require('child_process');
-zlib = require('zlib');
-//Fiber = require('fibers');
-//Future = require('fibers/future');
-NodeZip=require('node-zip');
-//redis = require("then-redis");
-redis = require("redis");
-ip = require('ip');
-Streamify= require('streamify-string');
-serialize = require('serialize-javascript');
-mime = require("mime");
-var argv = require('minimist')(process.argv.slice(2));
-app=(typeof window==='undefined')?global:window;
-require('./lib.js');
-require('./libServerGeneral.js');
-require('./libServer.js');
-//require('./store.js');
+//import querystring from 'querystring';
+import formidable from "formidable";
+import crypto from 'crypto';
+import zlib from 'zlib';
+import NodeZip from 'node-zip';
+import redis from "redis";
+import ip from 'ip';
+//import Streamify from 'streamify-string';
+import serialize from 'serialize-javascript';
+import mime from "mime";
+import minimist from 'minimist';
+var argv=minimist(process.argv.slice(2));
+import './lib.js';
+extend(app, {http, url, path, fsPromises, mysql, concat, mime, fetch, formidable, crypto, zlib, NodeZip, redis, ip, serialize, mime});
+
+import './libServerGeneral.js';
+import './libServer.js';
+//import './store.js';
 
 
-strAppName='syncameeting';
-extend=util._extend;
+app.strAppName='syncameeting';
+//extend=util._extend;
 
 
-strInfrastructure=process.env.strInfrastructure||'local';
-boHeroku=strInfrastructure=='heroku'; 
-boAF=strInfrastructure=='af'; 
-boLocal=strInfrastructure=='local'; 
-boDO=strInfrastructure=='do'; 
+app.strInfrastructure=process.env.strInfrastructure||'local';
+app.boHeroku=strInfrastructure=='heroku'; 
+app.boAF=strInfrastructure=='af'; 
+app.boLocal=strInfrastructure=='local'; 
+app.boDO=strInfrastructure=='do'; 
 
-StrValidSqlCalls=['createTable', 'dropTable', 'createFunction', 'dropFunction', 'truncate']; // , 'createDummy', 'createDummies'
+app.StrValidSqlCalls=['createTable', 'dropTable', 'createFunction', 'dropFunction', 'truncate']; // , 'createDummy', 'createDummies'
 
-helpTextExit=function(){
+var helpTextExit=function(){
   var arr=[];
   arr.push('USAGE script [OPTION]...');
   arr.push('  -h, --help          Display this text');
@@ -62,7 +54,7 @@ helpTextExit=function(){
 
 var StrUnknown=AMinusB(Object.keys(argv),['_', 'h', 'help', 'p', 'port', 'sql']);
 var StrUnknown=[].concat(StrUnknown, argv._);
-if(StrUnknown.length){ console.log('Unknown arguments: '+StrUnknown.join(', ')); helpTextExit(); return;}
+if(StrUnknown.length){ console.log('Unknown arguments: '+StrUnknown.join(', ')); helpTextExit(); }
 
     // Set up redisClient
 var urlRedis;
@@ -70,87 +62,89 @@ if(  (urlRedis=process.env.REDISTOGO_URL)  || (urlRedis=process.env.REDISCLOUD_U
   var objRedisUrl=url.parse(urlRedis),    password=objRedisUrl.auth.split(":")[1];
   var objConnect={host: objRedisUrl.hostname, port: objRedisUrl.port,  password: password};
   //redisClient=redis.createClient(objConnect); // , {no_ready_check: true}
-  redisClient=redis.createClient(urlRedis, {no_ready_check: true}); //
+  app.redisClient=redis.createClient(urlRedis, {no_ready_check: true}); //
 }else {
   //var objConnect={host: 'localhost', port: 6379,  password: 'password'};
-  redisClient=redis.createClient();
+  app.redisClient=redis.createClient();
 }
 
 
 (async function(){
 
     // Default config variables (If you want to change them I suggest you create a file config.js and overwrite them there)
-  boDbg=0; boAllowSql=1; port=5000; levelMaintenance=0; googleSiteVerification='googleXXX.html';
-  wwwCommon='';
-  domainPayPal='www.paypal.com';
-  urlPayPal='https://www.paypal.com/cgi-bin/webscr';
-  intDDOSMax=100; tDDOSBan=5; 
-  maxUnactivity=3600*24;
-  boUseSSLViaNodeJS=false;
-  wsIconDefaultProt="/Site/Icon/iconRed<size>.png"
+  extend(app, {uriDB:'', boDbg:0, boAllowSql:1, port:5000, levelMaintenance:0, googleSiteVerification:'googleXXX.html',
+    wwwCommon:'',
+    intDDOSMax:100, tDDOSBan:5, 
+    maxUnactivity:3600*24,
+    boUseSSLViaNodeJS:false,
+    wsIconDefaultProt:"/Site/Icon/iconRed<size>.png",
+    timeOutDeleteStatusInfo:3600,
+    RootDomain:{},
+    Site:{},
+  });
 
   port=argv.p||argv.port||5000;
-  if(argv.h || argv.help) {helpTextExit(); return;}
+  if(argv.h || argv.help) {helpTextExit(); }
 
   var strConfig;
   if(boHeroku){ 
-    if(!process.env.jsConfig) { console.error('jsConfig-environment-variable is not set'); return;} //process.exit(1);
+    if(!process.env.jsConfig) { console.error('jsConfig-environment-variable is not set'); process.exit(-1);} //process.exit(1);
     strConfig=process.env.jsConfig||'';
   }
   else{
-    var [err, buf]=await fsPromises.readFile('./config.js').toNBP();    if(err) {console.error(err); return;}
+    var [err, buf]=await fsPromises.readFile('./config.js').toNBP();    if(err) {console.error(err); process.exit(-1);}
     strConfig=buf.toString();
   } 
   var strMd5Config=md5(strConfig);
   eval(strConfig);
   var redisVar='str'+ucfirst(strAppName)+'Md5Config';
-  var [err,tmp]=await getRedis(redisVar); if(err) {console.error(err); return;}
+  var [err,tmp]=await getRedis(redisVar); if(err) {console.error(err); process.exit(-1);}
   var boNewConfig=strMd5Config!==tmp;
-  if(boNewConfig) { var [err,tmp]=await setRedis(redisVar,strMd5Config);   if(err) {console.error(err); return;}      }
+  if(boNewConfig) { var [err,tmp]=await setRedis(redisVar,strMd5Config);   if(err) {console.error(err); process.exit(-1);}      }
 
-  if('levelMaintenance' in process.env) levelMaintenance=process.env.levelMaintenance;
+  app.levelMaintenance=process.env.levelMaintenance??0;
 
-  SiteName=Object.keys(Site);
+  app.SiteName=Object.keys(Site);
 
-  require('./variablesCommon.js');
-  require('./libReqBE.js');
-  require('./libReq.js'); 
+  await import('./variablesCommon.js');
+  await import('./libReqBE.js');
+  await import('./libReq.js'); 
 
 
-  mysqlPool=setUpMysqlPool();
+  app.mysqlPool=setUpMysqlPool();
   SiteExtend();
 
     // Do db-query if --sql XXXX was set in the argument
   if(typeof argv.sql!='undefined'){
-    if(typeof argv.sql!='string') {console.log('sql argument is not a string'); process.exit(-1); return; }
+    if(typeof argv.sql!='string') {console.log('sql argument is not a string'); process.exit(-1);  }
     var tTmp=new Date().getTime();
     var setupSql=new SetupSql();
     setupSql.myMySql=new MyMySql(mysqlPool);
     var [err]=await setupSql.doQuery(argv.sql);
     setupSql.myMySql.fin();
-    if(err) {  console.error(err);  return;}
+    if(err) {  console.error(err);  process.exit(-1);}
     console.log('Time elapsed: '+(new Date().getTime()-tTmp)/1000+' s'); 
     process.exit(0);
   }
 
-  tIndexMod=new Date(); tIndexMod.setMilliseconds(0);
+  app.tIndexMod=new Date(); tIndexMod.setMilliseconds(0);
 
 
-  regexpLib=RegExp('^/(stylesheets|lib|lang|Site)/');
-  regexpLooseJS=RegExp('^/(lib|libClient|client|siteSpecific)\\.js');
+  var regexpLib=RegExp('^/(stylesheets|lib|lang|Site)/');
+  var regexpLooseJS=RegExp('^/(lib|libClient|client|siteSpecific)\\.js');
   //regexpImage=RegExp('^/[^/]*\\.(jpg|jpeg|gif|png|svg)$','i');
 
 
-  CacheUri=new CacheUriT();
-  StrFilePreCache=['lib.js', 'libClient.js', 'client.js', 'stylesheets/resetMeyer.css', 'stylesheets/style.css','lang/en.js'];
+  app.CacheUri=new CacheUriT();
+  var StrFilePreCache=['lib.js', 'libClient.js', 'client.js', 'stylesheets/resetMeyer.css', 'stylesheets/style.css','lang/en.js'];
   for(var i=0;i<StrFilePreCache.length;i++) {
     var filename=StrFilePreCache[i];
-    var [err]=await readFileToCache(filename); if(err) {  console.error(err);  return;}
+    var [err]=await readFileToCache(filename); if(err) {  console.error(err);  process.exit(-1);}
   }
-  var [err]=await createSiteSpecificClientJSAll(); if(err) {console.error(err); return;} 
+  var [err]=await createSiteSpecificClientJSAll(); if(err) {console.error(err); process.exit(-1);} 
   
     // Write manifest to Cache
-  var [err]=await createManifestNStoreToCacheMult(SiteName); if(err) {console.error(err); return;} 
+  var [err]=await createManifestNStoreToCacheMult(SiteName); if(err) {console.error(err); process.exit(-1);} 
   
   if(boDbg){
     fs.watch('.', makeWatchCB('.', ['client.js', 'libClient.js']) );
@@ -172,7 +166,7 @@ if(  (urlRedis=process.env.REDISTOGO_URL)  || (urlRedis=process.env.REDISCLOUD_U
     
 
     var domainName=req.headers.host; 
-    var objUrl=url.parse(req.url), qs=objUrl.query||'', objQS=querystring.parse(qs),  pathNameOrg=objUrl.pathname;
+    var objUrl=url.parse(req.url), qs=objUrl.query||'', objQS=parseQS2(qs), pathNameOrg=objUrl.pathname;
     var wwwReq=domainName+pathNameOrg;
     var {siteName,wwwSite}=Site.getSite(wwwReq);  
     if(!siteName){ res.out404("404 Nothing at that url\n"); return; }
@@ -256,8 +250,7 @@ if(  (urlRedis=process.env.REDISTOGO_URL)  || (urlRedis=process.env.REDISCLOUD_U
     else if(regexpLib.test(pathName) || regexpLooseJS.test(pathName) || pathName=='/conversion.html' || pathName=='/'+leafManifest){   await reqStatic.call(objReqRes);   }
     else if(pathName=='/'+leafLogin){   
       var state=randomHash(); //CSRF protection
-      var objT={state, IP:objQS.IP, fun:objQS.fun, caller:objQS.caller||"index"};
-      //var redisVar=req.sessionID+'_Login', tmp=wrapRedisSendCommand('set',[redisVar,JSON.stringify(objT)]);     var tmp=wrapRedisSendCommand('expire',[redisVar,300]);
+      var {IP,fun,caller="index"}=objQS,    objT={state, IP, fun, caller};
       var [err]=await setRedis(req.sessionID+'_Login', objT, 300);   if(err) res.out500(err);
       var uLoginBack=uDomain+"/"+leafLoginBack;
       var uTmp=UrlOAuth.fb+"?client_id="+req.rootDomain.fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&state="+state+'&display=popup';

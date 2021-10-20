@@ -2,6 +2,8 @@
 
 "use strict"
 
+//function\(([\w,]+)\)\s*\{\s*return *
+
 var mesOMake=function(glue){ return function(str){
   if(str) this.Str.push(str);
   var str=this.Str.join(glue);  this.res.end(str);
@@ -28,8 +30,7 @@ var mesEOMakeJSON=function(glue){ return function(err){
  ******************************************************************************/
 app.reqIndex=async function() {
   var {req, res}=this, {flow, siteName, site, uSite, wwwSite, objQS}=req;
-  //var uuid=null; if('uuid' in objQS) { uuid=objQS.uuid;}
-  var uuid=objQS.uuid||null;
+  var {uuid=null}=objQS
 
 
   var requesterCacheTime=getRequesterTime(req.headers);
@@ -104,7 +105,7 @@ xmlns:fb="http://www.facebook.com/2008/fbml">`);
   }
 
   
-  Str.push(`<script>var app=window;</script>`);
+  Str.push(`<script>globalThis.app=window;</script>`);
   Str.push(`<style>
 :root { --maxWidth:800px; height:100%}
 body {margin:0; height:100%; display:flow-root; font-family:arial, verdana, helvetica;}
@@ -151,12 +152,12 @@ h1 { font-size:1.6rem; font-weight:bold; letter-spacing:0.15em; text-shadow:-1px
 
     // Include site specific JS-files
   var uSite=req.strSchemeLong+wwwSite;
-  var keyCache=siteName+'/'+leafSiteSpecific, vTmp=boDbgT?0:CacheUri[keyCache].eTag;  Str.push('<script src="'+uSite+'/'+leafSiteSpecific+'?v='+vTmp+'" async></script>');
+  var keyCache=siteName+'/'+leafSiteSpecific, vTmp=boDbgT?0:CacheUri[keyCache].eTag;  Str.push('<script type="module" src="'+uSite+'/'+leafSiteSpecific+'?v='+vTmp+'" async></script>');
 
     // Include JS-files
   var StrTmp=['lib.js', 'libClient.js', 'client.js', 'lang/en.js'];
   for(var i=0;i<StrTmp.length;i++){
-    var pathTmp='/'+StrTmp[i], vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<script src="'+uCommon+pathTmp+'?v='+vTmp+'" async></script>');
+    var pathTmp='/'+StrTmp[i], vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<script type="module" src="'+uCommon+pathTmp+'?v='+vTmp+'" async></script>');
   }
 
 
@@ -184,9 +185,9 @@ h1 { font-size:1.6rem; font-weight:bold; letter-spacing:0.15em; text-shadow:-1px
 <noscript><div style="text-align:center">You don't have javascript enabled, so this app won't work.</div></noscript>`);
 
 
-  Str.push(`<script type="text/javascript" language="JavaScript" charset="UTF-8">
-boTLS=`+JSON.stringify(site.boTLS)+`;
-uuid=`+JSON.stringify(uuid)+`;
+//boTLS=`+JSON.stringify(site.boTLS)+`;
+  Str.push(`<script>
+globalThis.uuid=`+JSON.stringify(uuid)+`;
 </script>
 </body>
 </html>`);
@@ -417,8 +418,9 @@ app.reqDataDelete=async function(){  //
 
 app.reqDataDeleteStatus=async function(){
   var {req, res}=this, {site, objQS, uSite}=req;
-  var objUrl=url.parse(req.url), qs=objUrl.query||'', objQS=querystring.parse(qs);
-  var confirmation_code=objQS.confirmation_code||'';
+  // var objUrl=url.parse(req.url), qs=objUrl.query||'', objQS=querystring.parse(qs);
+  // var confirmation_code=objQS.confirmation_code||'';
+  var {confirmation_code=''}=objQS;
   var [err,mess]=await cmdRedis('GET', [confirmation_code+'_DeleteRequest']); 
   if(err) {var mess=err.message;}
   else if(mess==null) {

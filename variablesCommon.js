@@ -1,45 +1,46 @@
 
 
-two31=Math.pow(2,31);  intMax=two31-1;  intMin=-two31;
-sPerDay=24*3600;  sPerMonth=sPerDay*30;
+app.two31=Math.pow(2,31);  app.intMax=two31-1;  app.intMin=-two31;
+app.sPerDay=24*3600;  app.sPerMonth=sPerDay*30;
 
 
+var fsWebRootFolder=process.cwd();
+var flLibFolder='lib';
 
-fsWebRootFolder=process.cwd();
-flLibFolder='lib';
-
-flFoundOnTheInternetFolder=flLibFolder+"/foundOnTheInternet";
+var flFoundOnTheInternetFolder=flLibFolder+"/foundOnTheInternet";
 //flLibImageFolder=flLibFolder+"/image";  
-flImageFolder=flLibFolder+"/image";
-flLogFolder="log";
+app.flImageFolder=flLibFolder+"/image";
+app.flLogFolder="log";
 
   // Files: 
-leafBE='be.json';
-leafSiteSpecific='siteSpecific.js'; 
-leafLogin="login.html";
-leafLoginBack="loginBack.html";
-leafManifest='manifest.json';
-leafDataDelete='dataDelete';
-leafDataDeleteStatus='dataDeleteStatus';
-leafDeAuthorize='deAuthorize';
+extend(app,{
+leafBE:'be.json',
+leafSiteSpecific:'siteSpecific.js', 
+leafLogin:"login.html",
+leafLoginBack:"loginBack.html",
+leafManifest:'manifest.json',
+leafDataDelete:'dataDelete',
+leafDataDeleteStatus:'dataDeleteStatus',
+leafDeAuthorize:'deAuthorize'
+});
 
 
 
 
-tmpSubTab='tmpDataTab';
-sqlTempSubTabCreate="CREATE TEMPORARY TABLE IF NOT EXISTS "+tmpSubTab+" (name varchar(128) NOT NULL,  boOn TINYINT(1) NOT NULL,  UNIQUE KEY (name));";
+//var tmpSubTab='tmpDataTab';
+//var sqlTempSubTabCreate="CREATE TEMPORARY TABLE IF NOT EXISTS "+tmpSubTab+" (name varchar(128) NOT NULL,  boOn TINYINT(1) NOT NULL,  UNIQUE KEY (name));";
 
-listCol={};
-listCol.KeyCol=['uuid','title'    ,'created','lastActivity'];
-listCol.dateMask=[0,0,0,  1,1];
-listCol.backSel=[0,1,2,3,4]; 
-listCol.backVis=[2,3,4]; 
+app.listCol={
+KeyCol:['uuid','title'    ,'created','lastActivity'],
+dateMask:[0,0,0,  1,1],
+backSel:[0,1,2,3,4],
+backVis:[2,3,4]
+}
 
 
   //Enum names
-Enum={};
-Enum.IP=['openid', 'fb','google'];
-enumVoid=0; enumY=2; enumN=1;
+app.Enum={IP:['openid', 'fb','google']};
+extend(app,{enumVoid:0, enumY:2, enumN:1});
 
 
 
@@ -47,21 +48,21 @@ enumVoid=0; enumY=2; enumN=1;
 
 
    // DB- tables
-StrTableKey=["schedule","user"]; 
-StrViewsKey=[]; 
-TableNameProt={};for(var i=0;i<StrTableKey.length;i++) TableNameProt[StrTableKey[i]]='';
-ViewNameProt={};for(var i=0;i<StrViewsKey.length;i++) ViewNameProt[StrViewsKey[i]]='';
+var StrTableKey=["schedule","user"]; 
+var StrViewsKey=[]; 
+var TableNameProt={};for(var i=0;i<StrTableKey.length;i++) TableNameProt[StrTableKey[i]]='';
+var ViewNameProt={};for(var i=0;i<StrViewsKey.length;i++) ViewNameProt[StrViewsKey[i]]='';
 
 
-specialistDefault={'customer':0};
+app.specialistDefault={'customer':0};
 
-codeLen=8;
-version='2';
+//codeLen=8;
+app.version='2';
 
 
-IntSizeIcon=[16, 114, 192, 200, 512, 1024];
-IntSizeIconFlip=array_flip(IntSizeIcon);
-SiteExtend=function(){
+var IntSizeIcon=[16, 114, 192, 200, 512, 1024];
+app.IntSizeIconFlip=array_flip(IntSizeIcon);
+app.SiteExtend=function(){
   Site.getSite=function(wwwReq){
     for(var i=0;i<SiteName.length;i++){
       var siteName=SiteName[i];   var tmp; if(tmp=Site[siteName].testWWW(wwwReq)) {return {siteName, wwwSite:tmp};  }
@@ -106,10 +107,9 @@ SiteExtend=function(){
 }
 
 
-nDBConnectionLimit=10; nDBQueueLimit=100;
-nDBRetry=14;
+var nDBConnectionLimit=10, nDBQueueLimit=100, nDBRetry=14;
 
-setUpMysqlPool=function(){
+app.setUpMysqlPool=function(){
   var uriObj=url.parse(uriDB);
   var StrMatch=RegExp('^(.*):(.*)$').exec(uriObj.auth);
   var nameDB=uriObj.pathname.substr(1);

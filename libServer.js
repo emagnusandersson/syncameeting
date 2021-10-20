@@ -49,9 +49,9 @@ var createSiteSpecificClientJS=function(siteName) {
   for(var i=0;i<Key.length;i++){ var name=Key[i]; if(StrSkip.indexOf(name)==-1) siteSimplified[name]=site[name]; }
 
   var Str=[];
-  Str.push("assignSiteSpecific=function(){");
+  Str.push("globalThis.assignSiteSpecific=function(){");
 
-  var StrVar=['boDbg', 'version', 'intMax', 'leafLogin', 'leafBE', 'flImageFolder', 'specialistDefault', 'wwwCommon', 'siteName', 'urlPayPal', 'listCol', 'enumVoid', 'enumY', 'enumN', 'strBTC', 'ppStoredButt' ];
+  var StrVar=['boDbg', 'version', 'intMax', 'leafLogin', 'leafBE', 'flImageFolder', 'specialistDefault', 'wwwCommon', 'siteName', 'listCol', 'enumVoid', 'enumY', 'enumN' ];
   var objOut=copySome({},app,StrVar);
   //copySome(objOut,site,['wwwSite']);
   objOut.site=siteSimplified;

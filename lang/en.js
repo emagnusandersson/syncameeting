@@ -1,5 +1,5 @@
-langClientFunc=function(){
-langHtml={
+
+globalThis.langHtml={
 Cancel:'Cancel',
 Yes:'Yes',
 Save:'Save',
@@ -58,10 +58,6 @@ in:'in ...'},
 
 link:'link'
 }
-}
 
-langServerFunc=function(){
-
-}
 
 

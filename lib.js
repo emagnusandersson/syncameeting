@@ -1,7 +1,9 @@
 "use strict"
 
-//var app=(typeof window==='undefined')?global:window;
 var app=globalThis;
+globalThis.app=globalThis;
+
+app.extend=Object.assign;
 
 Promise.prototype.toNBP=function(){   return this.then(a=>{return [null,a];}).catch(e=>{return [e];});   }  // toNodeBackPromise
 
@@ -235,6 +237,12 @@ app.b64UrlDecode=function(b64UrlString, boUint8Array=false){  // boUint8Array==t
   return outputArray;
 }
 
+
+app.parseQS2=function(qs){
+  var objQS={}, objTmp=new URLSearchParams(qs);
+  for(const [name, value] of objTmp) {  objQS[name]=value;  }
+  return objQS;
+}
 
 //
 // Escaping data
