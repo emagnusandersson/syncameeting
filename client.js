@@ -170,7 +170,7 @@ var loginReturnList=function(){  //   after 'loginbutt'->'loginScreen' or 'delet
   if(isSetObject(userInfoFrIP)) {var vec=[['listSchedule',{},linkListPop.listScheduleRet]]; majax(vec); }
 }
 
-app.loginReturn=function(userInfoFrIPT,userInfoFrDBT,fun,strMess,CSRFCodeT){
+app.loginReturn=function(userInfoFrIPT,userInfoFrDBT,CSRFCodeT){
   CSRFCode=CSRFCodeT;
 
   var tmp=['idIP','IP','nameIP','nickIP']; userInfoFrIP={};
@@ -195,14 +195,8 @@ var loginPopExtend=function(el){
     //e.preventDefault();
     pendingMess.show(); cancelMess.hide();
     
-    //var strFile='loginStart.php';
-    var strFile=leafLogin;
-    //var arrQ=['IP='+IP, 'fileReturn='+encodeURIComponent(leafLogin+'?fun='+strType+'Fun')];
-    var strType='customer'
-    var arrQ=['IP='+IP, 'fileReturn='+leafLogin,'fun='+strType+'Fun'];
-    if(IP==='openid') arrQ.push('openid_identifier='+encodeURIComponent(openid));
-    var uPop=strFile+'?'+arrQ.join('&');
-    el.win=window.open(uPop, 'popup', 'width=580,height=400');
+    var arrQ=['IP='+IP],  uPop=leafLogin+'?'+arrQ.join('&');
+    el.win=window.open(uPop); //, 'popup', 'width=580,height=400'
 
     clearInterval(timerClosePoll);
     timerClosePoll = setInterval(function() { if(el.win.closed){ clearInterval(timerClosePoll); pendingMess.hide(); cancelMess.show(); }  }, 500);  

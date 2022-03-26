@@ -13,7 +13,7 @@ import fetch from 'node-fetch';
 import formidable from "formidable";
 import crypto from 'crypto';
 import zlib from 'zlib';
-import NodeZip from 'node-zip';
+//import NodeZip from 'node-zip';
 import redis from "redis";
 import ip from 'ip';
 //import Streamify from 'streamify-string';
@@ -22,7 +22,7 @@ import mime from "mime";
 import minimist from 'minimist';
 var argv=minimist(process.argv.slice(2));
 import './lib.js';
-extend(app, {http, url, path, fsPromises, mysql, concat, mime, fetch, formidable, crypto, zlib, NodeZip, redis, ip, serialize, mime});
+extend(app, {http, url, path, fsPromises, mysql, concat, mime, fetch, formidable, crypto, zlib, redis, ip, serialize, mime});
 
 import './libServerGeneral.js';
 import './libServer.js';
@@ -239,7 +239,7 @@ if(  (urlRedis=process.env.REDISTOGO_URL)  || (urlRedis=process.env.REDISCLOUD_U
     var strScheme='http'+(site.boTLS?'s':''),   strSchemeLong=strScheme+'://';
     var uDomain=strSchemeLong+domainName;
     var uSite=strSchemeLong+wwwSite;
-    extend(req, {site, sessionID, qs, objQS, siteName, strSchemeLong, wwwSite, uSite, pathName, rootDomain:RootDomain[site.strRootDomain]});
+    extend(req, {site, sessionID, qs, objQS, siteName, strSchemeLong, wwwSite, uSite, uDomain, pathName, rootDomain:RootDomain[site.strRootDomain]});
 
     var objReqRes={req, res};
     objReqRes.myMySql=new MyMySql(mysqlPool);
@@ -248,14 +248,7 @@ if(  (urlRedis=process.env.REDISTOGO_URL)  || (urlRedis=process.env.REDISCLOUD_U
     else if(pathName=='/'+leafBE){  var reqBE=new ReqBE(objReqRes);  await reqBE.go();    }
     //else if(pathName=='/'+leafAssign){  var reqAssign=new ReqAssign(req, res);    reqAssign.go();  }
     else if(regexpLib.test(pathName) || regexpLooseJS.test(pathName) || pathName=='/conversion.html' || pathName=='/'+leafManifest){   await reqStatic.call(objReqRes);   }
-    else if(pathName=='/'+leafLogin){   
-      var state=randomHash(); //CSRF protection
-      var {IP,fun,caller="index"}=objQS,    objT={state, IP, fun, caller};
-      var [err]=await setRedis(req.sessionID+'_Login', objT, 300);   if(err) res.out500(err);
-      var uLoginBack=uDomain+"/"+leafLoginBack;
-      var uTmp=UrlOAuth.fb+"?client_id="+req.rootDomain.fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&state="+state+'&display=popup';
-      res.writeHead(302, {'Location': uTmp}); res.end();
-    }
+    else if(pathName=='/'+leafLogin){   await reqLogin.call(objReqRes);  }
     else if(pathName=='/'+leafLoginBack){    var reqLoginBack=new ReqLoginBack(objReqRes);    await reqLoginBack.go();    }
     else if(pathName=='/'+leafDataDelete){  await reqDataDelete.call(objReqRes);  }
     else if(pathName=='/'+leafDataDeleteStatus){  await reqDataDeleteStatus.call(objReqRes);  }

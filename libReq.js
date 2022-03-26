@@ -171,11 +171,12 @@ h1 { font-size:1.6rem; font-weight:bold; letter-spacing:0.15em; text-shadow:-1px
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
   })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-  ga('create', '`+tmpID+`', 'auto');
+  ga('create', '`+tmpID+`', { 'storage': 'none' });
   ga('send', 'pageview');
 </script>`;
   }
   Str.push(strTracker);
+  //ga('create', '`+tmpID+`', 'auto');
 
   Str.push("</head>");
   Str.push(`<body>
@@ -201,6 +202,20 @@ globalThis.uuid=`+JSON.stringify(uuid)+`;
 
 
 
+/******************************************************************************
+ * reqLogin
+ ******************************************************************************/
+app.reqLogin=async function(){
+  var {req, res}=this, {sessionID, objQS, uDomain, rootDomain}=req;
+  var state=randomHash(); //CSRF protection
+  var {IP,caller="index"}=objQS,    objT={state, IP, caller};
+  var [err]=await setRedis(sessionID+'_Login', objT, 300);   if(err) res.out500(err);
+  var {fb}=rootDomain;
+  var uLoginBack=uDomain+"/"+leafLoginBack;
+  var uTmp=UrlOAuth.fb+"?client_id="+fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&state="+state;
+      //+'&display=popup'  +"&scope=public_profile"
+  res.writeHead(302, {'Location': uTmp}); res.end();
+}
 
 /******************************************************************************
  * ReqLoginBack
@@ -212,48 +227,37 @@ globalThis.uuid=`+JSON.stringify(uuid)+`;
 app.ReqLoginBack=function(objReqRes){
   Object.assign(this, objReqRes);
   this.site=this.req.site;
-  this.mess=[];  this.Str=[];
+  this.Str=[];
 }
 ReqLoginBack.prototype.go=async function(){
-  var self=this, {req, res}=this, sessionID=req.sessionID, objQS=req.objQS;
+  var self=this, {req, res}=this, {sessionID, objQS}=req;
 
-  var redisVar=req.sessionID+'_Login'; 
-  var [err, val]=await getRedis(redisVar,1); if(err) { res.out500(err); return; }  this.sessionLogin=val
-  if(!this.sessionLogin) { res.out500('!sessionLogin');  return; }
-  var strFun=this.sessionLogin.fun;
+  var redisVar=sessionID+'_Login'; 
+  var [err, sessionLogin]=await getRedis(redisVar,1); if(err) { res.out500(err); return; } 
+  if(!sessionLogin) { res.out500('!sessionLogin');  return; }
 
-  //var redisVar=this.req.sessionID+'_Login', strTmp=wrapRedisSendCommand('get',[redisVar]);   this.sessionLogin=JSON.parse(strTmp);
-  //if(!this.sessionLogin) { res.out500('!sessionLogin');  return; }
-  //var strFun=this.sessionLogin.fun;
-  
 
-  //getSessionMain.call(this);
-  var [err, val]=await getRedis(req.sessionID+'_Cache',1);  if(err) { res.out500(err); return; }  this.sessionCache=val;
+
+  var redisVar=sessionID+'_Cache';
+  var [err, val]=await getRedis(redisVar,1);  if(err) { res.out500(err); return; }  this.sessionCache=val;
   if(!this.sessionCache) { res.out500('!sessionCache');  return; } 
-  var redisVar=this.req.sessionID+'_Cache'; // tmp=wrapRedisSendCommand('expire',[redisVar,maxUnactivity]);
   var [err]=await expireRedis(redisVar, maxUnactivity); if(err) {res.out500(err); return;};
 
   if(!this.sessionCache.userInfoFrDB){
     this.sessionCache.userInfoFrDB=extend({},specialistDefault);
-    //setSessionMain.call(this);
-    var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
+    var [err]=await setRedis(redisVar, this.sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
   }
   
   
-  if('error' in objQS && objQS.error=='access_denied') {this.writeHtml(objQS.error); return}
-
-  //var fiber = Fiber.current;
+  if('error' in objQS && objQS.error=='access_denied') { this.writeHtml(objQS.error); return}
 
 
     // getToken
   var code=req.objQS.code;
   var uLoginBack=req.uSite+"/"+leafLoginBack;
 
-  if(req.objQS.state==this.sessionLogin.state) {
-    var uToGetToken=UrlToken.fb+"?client_id="+req.rootDomain.fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&client_secret="+req.rootDomain.fb.secret+"&code="+code;
-    //var reqStream=requestMod.get(uToGetToken); 
-    //var buf=await new Promise(resolve=>{   var myConcat=concat(bT=>resolve(bT));    reqStream.pipe(myConcat);   });
-    //try{ var params=JSON.parse(buf.toString()); }catch(e){ console.log(e); res.out500('Error in JSON.parse, '+e); return; }
+  if(req.objQS.state==sessionLogin.state) {
+    var uToGetToken=UrlToken.fb+"?client_id="+req.rootDomain.fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&client_secret="+req.rootDomain.fb.secret+"&code="+code; // In my mind one shouldn't need to supply redirect_uri here, but facebook requires it. Looks like security by obscurity.
     var [err,response]=await fetch(uToGetToken).toNBP(); if(err){res.out500(err); return;};
     var [err, params]=await response.json().toNBP(); if(err){res.out500(err); return;};
     self.access_token=params.access_token;
@@ -264,11 +268,13 @@ ReqLoginBack.prototype.go=async function(){
   }
 
 
-  var [err, res]=await this.getGraph();  if(err){ res.out500(err); return; }
+    // Get objGraph 
+  var uGraph=UrlGraph.fb+"?access_token="+this.access_token;  //  ,verified,name  +'&fields=id,name'
+  var [err, response]=await fetch(uGraph).toNBP(); if(err){ res.out500(err); return; }
+  var [err, objGraph]=await response.json().toNBP(); if(err){ res.out500(err); return; }
+  
 
-
-    // interpretGraph
-  var objGraph=this.objGraph;  
+    // interpretGraph 
   if('error' in objGraph) {console.log('Error accessing data from facebook: '+objGraph.error.type+' '+objGraph.error.message+'<br>'); return; }
   var IP='fb', idIP=objGraph.id, nameIP=objGraph.name;
 
@@ -283,45 +289,26 @@ ReqLoginBack.prototype.go=async function(){
   }
   this.sessionCache.userInfoFrIP={IP,idIP,nameIP};
   
-  //setSessionMain.call(this);
-  var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
+  var [err]=await setRedis(sessionID+'_Cache', this.sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
   
-  this.IP=IP;this.idIP=idIP;
+  extend(this,{IP,idIP});
 
 
     // setCSRFCode
   var CSRFCode=randomHash();
-  var redisVar=this.req.sessionID+'_CSRFCode'+ucfirst(this.sessionLogin.caller);
-  //wrapRedisSendCommand('set',[redisVar, CSRFCode]);    var tmp=wrapRedisSendCommand('expire',[redisVar,maxUnactivity]);
+  var redisVar=sessionID+'_CSRFCode'+ucfirst(sessionLogin.caller);
   var [err]=await setRedis(redisVar, CSRFCode, maxUnactivity);  if(err) {res.out500(err); return;};
   this.CSRFCode=CSRFCode;
 
   this.writeHtml(null);
 }
 
-
-ReqLoginBack.prototype.getGraph=async function(){
+ReqLoginBack.prototype.writeHtml=function(err){
   var {req, res}=this;
   
-  var uGraph=UrlGraph.fb+"?access_token="+this.access_token+'&fields=id,name';  //  ,verified
-  //var reqStream=requestMod.get(uGraph);
-  //var buf=await new Promise(resolve=>{   var myConcat=concat(bT=>resolve(bT));    reqStream.pipe(myConcat);     })
-  var [err,response]=await fetch(uGraph).toNBP(); if(err) return [err];
-  var [err, objGraph]=await response.json().toNBP(); if(err) return [err];
-  //var objGraph=JSON.parse(buf.toString());
-  this.objGraph=objGraph;
-  return [null,''];
-}
-
-
-ReqLoginBack.prototype.writeHtml=function(err, results){
-  var self=this, {req, res}=this;
-  
   var boOK=!Boolean(err);
-  var strMess=this.mess.join(', ');
-  //if(err){res.out500(err);  return; }
   if(err){
-    console.log('err: '+err); //console.log('results: '+results); console.log('mess: '+strMess);  console.log(req.objQS); 
+    console.log('err: '+err); 
   }
   var uSite=req.strSchemeLong+req.wwwSite;
   
@@ -333,19 +320,16 @@ ReqLoginBack.prototype.writeHtml=function(err, results){
 <body>
 <script>
 var boOK=`+JSON.stringify(boOK)+`;
-var strMess=`+serialize(strMess)+`;
 
 if(boOK){
   var userInfoFrIPTT=`+JSON.stringify(this.sessionCache.userInfoFrIP)+`;
   var userInfoFrDBTT=`+JSON.stringify(this.sessionCache.userInfoFrDB)+`;
   var CSRFCodeTT=`+JSON.stringify(this.CSRFCode)+`;
-  var fun=`+serialize(this.sessionLogin.fun)+`;
-  window.opener.loginReturn(userInfoFrIPTT,userInfoFrDBTT,fun,strMess,CSRFCodeTT);
+  window.opener.loginReturn(userInfoFrIPTT,userInfoFrDBTT,CSRFCodeTT);
   window.close();
 }
 else {
 //debugger
-  //alert('Login canceled: '+strMess);
   window.close();
 }
 </script>
@@ -711,28 +695,6 @@ var writeMessTextOfMultQuery=function(Sql, err, results){
 app.ReqSql=function(req, res){
   this.req=req; this.res=res;
   this.StrType=['table', 'fun', 'dropTable', 'dropFun', 'truncate', 'dummy', 'dummies']; 
-}
-app.ReqSql.prototype.createZip=function(objSetupSql){
-  var res=this.res, StrType=this.StrType;
-
-  var zipfile = new NodeZip();
-  for(var i=0;i<StrType.length;i++) {
-    var strType=StrType[i], SqlA;
-    var Match=RegExp("^(drop)?(.*)$").exec(strType), boDropOnly=Match[1]=='drop';
-    var SqlA=objSetupSql[Match[2].toLowerCase()](SiteName, boDropOnly);
-    var strDelim=';;', sql='-- DELIMITER '+strDelim+'\n'      +SqlA.join(strDelim+'\n')+strDelim      +'\n-- DELIMITER ;\n';
-    zipfile.file(strType+".sql", sql, {date:new Date(), compression:'DEFLATE'});
-  }
-
-  //var objArg={base64:false}; if(boCompress) objArg.compression='DEFLATE';
-  var objArg={type:'string'}; //if(boCompress) objArg.compression='DEFLATE';
-  var outdata = zipfile.generate(objArg);
-
-
-  var outFileName=strAppName+'Setup.zip';
-  var objHead={"Content-Type": MimeType.zip, "Content-Length":outdata.length, 'Content-Disposition':'attachment; filename='+outFileName};
-  res.writeHead(200,objHead);
-  res.end(outdata,'binary');
 }
 ReqSql.prototype.toBrowser=function(objSetupSql){
   var {req, res}=this;
