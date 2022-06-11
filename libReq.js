@@ -53,10 +53,6 @@ xmlns:fb="http://www.facebook.com/2008/fbml">`);
 
 
   var ua=req.headers['user-agent']||''; ua=ua.toLowerCase();
-  var boMSIE=RegExp('msie').test(ua);
-  var boAndroid=RegExp('android').test(ua);
-  var boFireFox=RegExp('firefox').test(ua);
-  //var boIOS= RegExp('iPhone|iPad|iPod','i').test(ua);
   var boIOS= RegExp('iphone','i').test(ua);
 
   
@@ -68,8 +64,6 @@ xmlns:fb="http://www.facebook.com/2008/fbml">`);
   Str.push('<link rel="apple-touch-icon" href="'+srcIcon114+'"/>');
 
 
-  var strTmp='';  //if(boAndroid && boFireFox) {  strTmp=", width=device-width";}
-  //var strTmp=", width=device-width, user-scalable=no";
   Str.push("<meta name='viewport' id='viewportMy' content='initial-scale=1'/>");
   Str.push('<meta name="theme-color" content="#fff"/>');
 
@@ -136,34 +130,8 @@ h1 { font-size:1.6rem; font-weight:bold; letter-spacing:0.15em; text-shadow:-1px
   Str.push(tmp);
 
 
-  var uCommon=''; if(wwwCommon) uCommon=req.strSchemeLong+wwwCommon;
-
-    // If boDbg then set vTmp=0 so that the url is the same, this way the debugger can reopen the file between changes
-
-    // Use normal vTmp on iOS (since I don't have any method of disabling cache on iOS devices (nor any debugging interface))
-  var boDbgT=boDbg; if(boIOS) boDbgT=0;
-  
-  
-  var keyTmp=siteName+'/'+leafManifest, vTmp=boDbgT?0:CacheUri[keyTmp].eTag;     Str.push(`<link rel="manifest" href="`+uSite+`/`+leafManifest+`?v=`+vTmp+`"/>`);
-  
-    // Include stylesheets
-  //var pathTmp='/stylesheets/resetMeyer.css', vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<link rel="stylesheet" href="'+uCommon+pathTmp+'?v='+vTmp+'" type="text/css">');
-  var pathTmp='/stylesheets/style.css', vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<link rel="stylesheet" href="'+uCommon+pathTmp+'?v='+vTmp+'" type="text/css">');
-
-    // Include site specific JS-files
-  var uSite=req.strSchemeLong+wwwSite;
-  var keyCache=siteName+'/'+leafSiteSpecific, vTmp=boDbgT?0:CacheUri[keyCache].eTag;  Str.push('<script type="module" src="'+uSite+'/'+leafSiteSpecific+'?v='+vTmp+'" async></script>');
-
-    // Include JS-files
-  var StrTmp=['lib.js', 'libClient.js', 'client.js', 'lang/en.js'];
-  for(var i=0;i<StrTmp.length;i++){
-    var pathTmp='/'+StrTmp[i], vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<script type="module" src="'+uCommon+pathTmp+'?v='+vTmp+'" async></script>');
-  }
-
-
-
-
   var strTracker, tmpID=site.googleAnalyticsTrackingID||null;
+  tmpID=null;  // Disabling ga
   if(boDbg||!tmpID){strTracker="<script> ga=function(){};</script>";}else{ 
   strTracker=`
 <script type="text/javascript">
@@ -178,18 +146,44 @@ h1 { font-size:1.6rem; font-weight:bold; letter-spacing:0.15em; text-shadow:-1px
   Str.push(strTracker);
   //ga('create', '`+tmpID+`', 'auto');
 
+
+  var uCommon=''; if(wwwCommon) uCommon=req.strSchemeLong+wwwCommon;
+
+    // If boDbg then set vTmp=0 so that the url is the same, this way the debugger can reopen the file between changes
+
+    // Use normal vTmp on iOS (since I don't have any method of disabling cache on iOS devices (nor any debugging interface))
+  var boDbgT=boDbg; if(boIOS) boDbgT=0;
+  
+  
+  var keyTmp=siteName+'/'+leafManifest, vTmp=boDbgT?0:CacheUri[keyTmp].eTag;     Str.push(`<link rel="manifest" href="`+uSite+`/`+leafManifest+`?v=`+vTmp+`"/>`);
+  
+    // Include stylesheets
+  //var pathTmp='/stylesheets/resetMeyer.css', vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<link rel="stylesheet" href="'+uCommon+pathTmp+'?v='+vTmp+'" type="text/css">');
+  var pathTmp='/stylesheets/style.css', vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<link rel="stylesheet" href="'+uCommon+pathTmp+'?v='+vTmp+'" type="text/css">');
+
+  Str.push(`<script>
+globalThis.uuid=`+JSON.stringify(uuid)+`;
+</script>`);
+
+    // Include site specific JS-files
+  var uSite=req.strSchemeLong+wwwSite;
+  var keyCache=siteName+'/'+leafSiteSpecific, vTmp=boDbgT?0:CacheUri[keyCache].eTag;  Str.push('<script type="module" src="'+uSite+'/'+leafSiteSpecific+'?v='+vTmp+'"></script>');
+
+    // Include JS-files
+  var StrTmp=['lib.js', 'libClient.js', 'lang/en.js', 'client.js'];
+  for(var i=0;i<StrTmp.length;i++){
+    var pathTmp='/'+StrTmp[i], vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<script type="module" src="'+uCommon+pathTmp+'?v='+vTmp+'"></script>');
+  }
+
+
+
+
   Str.push("</head>");
   Str.push(`<body>
 <title>`+strTitle+`</title>
 <div id=divEntryBar class="mainDivR" style="align-items:center; min-height:2rem; flex:0 0 auto"></div>
 <div id=divH1 class="mainDivR" style="border:solid 1px; color:black;  padding:0em; margin:0 auto 0; flex:0 0 auto; align-items:center; justify-content:center"><h1>`+strH1+`</h1></div>
-<noscript><div style="text-align:center">You don't have javascript enabled, so this app won't work.</div></noscript>`);
-
-
-//boTLS=`+JSON.stringify(site.boTLS)+`;
-  Str.push(`<script>
-globalThis.uuid=`+JSON.stringify(uuid)+`;
-</script>
+<noscript><div style="text-align:center">Javascript is disabled, so this app won't work.</div></noscript>
 </body>
 </html>`);
 

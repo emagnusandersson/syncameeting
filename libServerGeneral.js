@@ -43,8 +43,14 @@ MyMySql.prototype.rollbackNRelease=async function(){  await new Promise(resolve=
 MyMySql.prototype.commitNRelease=async function(){
   var err=await new Promise(resolve=>{this.connection.commit(eT=>resolve(eT));  });  this.connection.release();  return [err];
 }
+// MyMySql.prototype.isConnectionFree=function(){   return this.pool._freeConnections.indexOf(this.connection)!=-1;  }
+// MyMySql.prototype.fin=function(){
+//   if(this.connection) { 
+//     if(this.isConnectionFree()) this.connection.release();
+//     this.connection=null;
+//   };
+// }
 MyMySql.prototype.fin=function(){   if(this.connection) { this.connection.destroy();this.connection=null;};  }
-
 
 //
 // Errors
@@ -144,7 +150,7 @@ app.cmdRedis=async function(strCommand, arr){
   });
 }
 app.getRedis=async function(strVar, boObj=false){
-  var [err,res]=await cmdRedis('GET', [strVar]);  if(boObj) res=JSON.parse(res);  return [err,res];
+  var [err,data]=await cmdRedis('GET', [strVar]);  if(boObj) data=JSON.parse(data);  return [err,data];
 }
 app.setRedis=async function(strVar, val, tExpire=-1){
   if(typeof val!='string') var strA=JSON.stringify(val); else var strA=val;

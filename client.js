@@ -4,7 +4,7 @@
 //butDecCols, butIncCols
 
 "use strict"
-window.onload=function(){
+app.funLoad=function(){
 
 
 var createColJIndexNamesObj=function(arrName){
@@ -951,16 +951,14 @@ elHtml.css({height:'100%'});
 window.boTouch = Boolean('ontouchstart' in document.documentElement);  //boTouch=1;
 
 var ua=navigator.userAgent, uaLC = ua.toLowerCase(); //alert(ua);
-window.boAndroid = uaLC.indexOf("android") > -1;
-window.boFF = uaLC.indexOf("firefox") > -1; 
-
+app.boAndroid = uaLC.indexOf("android") > -1;
+app.boFF = uaLC.indexOf("firefox") > -1; 
 
 app.boChrome= /chrome/.test(uaLC);
 app.boIOS= /iphone|ipad|ipod/.test(uaLC);
-app.boEpiphany=/epiphany/.test(uaLC);    if(boEpiphany && !boAndroid) boTouch=false;  // Ugly workaround
-app.boEdge= /\bedge?\b/.test(uaLC) ;
+app.boEpiphany=/epiphany/.test(uaLC);    if(boEpiphany && !boAndroid) boTouch=false;  // Ugly workaround (epiphany=GNOME Web)
 
-window.boOpera=RegExp('OPR\\/').test(ua); if(boOpera) boChrome=false; //alert(ua);
+app.boOpera=RegExp('OPR\\/').test(ua); if(boOpera) boChrome=false; //alert(ua);
 
 if(boTouch){
   if(boIOS) {
@@ -1298,6 +1296,6 @@ setMess('Fetching data ',0,true);
 //loginInfoToggleStuff();
 
 }
-
-
+//window.onload=funLoad;
+funLoad();
 
