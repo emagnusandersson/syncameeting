@@ -183,8 +183,8 @@ Node.prototype.isDisplayed=function(){
 /*******************************************************************************************************************
  * popupHover: popup a elBubble when you hover over elArea
  *******************************************************************************************************************/
-app.popupHover=function(elArea, elBubble, tClose=4){
-  elBubble.css({position:'absolute', 'box-sizing':'border-box', margin:'0px', 'text-align':'left'}); //
+app.popupHover=function(elArea, elBubble, tClose=0){
+  elBubble.css({position:'absolute', margin:'0px', 'text-align':'left'}); //
   function setBubblePos(e){
     var xClear=6, yClear=6;
     var x = e.pageX, y = e.pageY;
@@ -242,7 +242,7 @@ app.popupHover=function(elArea, elBubble, tClose=4){
       if(elBubble.parentNode) closeFunc();
       else {
         elBody.append(elBubble); setBubblePos(e);
-        clearTimeout(timer);  if(tClose) timer=setTimeout(closeFunc, tClose*1000);
+        clearTimeout(timer);  if(tClose>0) timer=setTimeout(closeFunc, tClose*1000);
         if(boIOSTmp) elBody.append(elBlanket);
       }
     });
