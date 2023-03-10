@@ -15,7 +15,6 @@ Promise.prototype.toNBP=function(){   return this.then(a=>{return [null,a];}).ca
 app.ucfirst=function(string){  return string.charAt(0).toUpperCase() + string.slice(1);  }
 app.lcfirst=function(string){  return string.charAt(0).toLowerCase() + string.slice(1);  }
 app.isAlpha=function(str){  var regEx = /^[a-zA-Z0-9]+$/;  return str.match(regEx); } 
-String.prototype.trim = function() { return this.replace(/^\s+|\s+$/g,"");}
 
 //function pad2(n){ return ('0'+n).slice(-2);}
 app.pad2=function(n) {return (n<10?'0':'')+n;}

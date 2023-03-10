@@ -14,7 +14,8 @@ import formidable from "formidable";
 import myCrypto from 'crypto';
 import zlib from 'zlib';
 //import NodeZip from 'node-zip';
-import redis from "redis";
+//import redis from "redis";
+import Redis from "ioredis";
 import ip from 'ip';
 //import Streamify from 'streamify-string';
 import serialize from 'serialize-javascript';
@@ -22,7 +23,7 @@ import mime from "mime";
 import minimist from 'minimist';
 var argv=minimist(process.argv.slice(2));
 import './lib.js';
-extend(app, {http, url, path, fsPromises, mysql, concat, mime, fetch, formidable, myCrypto, zlib, redis, ip, serialize, mime});
+extend(app, {http, url, path, fsPromises, mysql, concat, mime, fetch, formidable, myCrypto, zlib, ip, serialize, mime});
 
 import './libServerGeneral.js';
 import './libServer.js';
@@ -56,11 +57,13 @@ var StrUnknown=[].concat(StrUnknown, argv._);
 if(StrUnknown.length){ console.log('Unknown arguments: '+StrUnknown.join(', ')); helpTextExit(); }
 
     // Set up redisClient
-var urlRedis=process.env.REDIS_URL;
-if(  urlRedis ) {
-  app.redisClient=redis.createClient(urlRedis, {no_ready_check: true}); //
-}else { app.redisClient=redis.createClient();}
+// var urlRedis=process.env.REDIS_URL;
+// if(  urlRedis ) {
+//   app.redisClient=redis.createClient(urlRedis, {no_ready_check: true}); //
+// }else { app.redisClient=redis.createClient();}
 
+var REDIS_URL="redis://localhost:6379"
+app.redis = new Redis(REDIS_URL);
 
   // Default config variables (If you want to change them I suggest you create a file config.js and overwrite them there)
 extend(app, {uriDB:'', boDbg:0, boAllowSql:1, port:5000, levelMaintenance:0, googleSiteVerification:'googleXXX.html',
@@ -148,6 +151,14 @@ app.strCookiePropNormal=";"+StrCookiePropProt.concat("SameSite=None").join(';');
 app.strCookiePropLax=";"+StrCookiePropProt.concat("SameSite=Lax").join(';');
 app.strCookiePropStrict=";"+StrCookiePropProt.concat("SameSite=Strict").join(';'); 
 
+var luaDDosCounterFun=`local c=redis.call('INCR',KEYS[1]); redis.call('EXPIRE',KEYS[1], ARGV[1]); return c`
+redis.defineCommand("myDDosCounterFun", { numberOfKeys: 1, lua: luaDDosCounterFun });
+
+var luaDogFeederFun=`local c=redis.call('GET',KEYS[1]); redis.call('EXPIRE',KEYS[1], ARGV[1]); return c`;
+//var luaDogFeederFun=`local c=redis.call('GET',KEYS[1]); if(c) then redis.call('EXPIRE',KEYS[1], ARGV[1]); end; return c`;
+redis.defineCommand("myDogFeederFun", { numberOfKeys: 1, lua: luaDogFeederFun });
+
+
 const handler=async function(req, res){
   //res.setHeader("X-Frame-Options", "deny");  // Deny for all (note: this header is removed for images (see reqMediaImage) (should also be removed for videos))
   res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");  // Deny for all (note: this header is removed in certain requests)
@@ -181,7 +192,7 @@ const handler=async function(req, res){
   var boSessionCookieInInput='sessionIDNormal' in cookies, sessionID=null, redisVarSessionCache;
   if(boSessionCookieInInput) {
     sessionID=cookies.sessionIDNormal;  redisVarSessionCache=sessionID+'_Cache';
-    var [err, tmp]=await cmdRedis('EXISTS', redisVarSessionCache); if(err) {console.error(err); process.exit(1);}
+    var [err, tmp]=await existsRedis(redisVarSessionCache); if(err) {console.error(err); process.exit(1);}
     req.boCookieNormalOK=tmp;
   } 
   
@@ -196,8 +207,8 @@ const handler=async function(req, res){
   }
   
     // Increase DDOS counter 
-  var luaCountFunc=`local c=redis.call('INCR',KEYS[1]); redis.call('EXPIRE',KEYS[1], ARGV[1]); return c`;
-  var [err, intCount]=await cmdRedis('EVAL',[luaCountFunc, 1, redisVarDDOSCounter, tDDOSBan]); if(err) {console.error(err); process.exit(1);}
+  //var [err, intCount]=await cmdRedis('EVAL',[luaDDosCounterFun, 1, redisVarDDOSCounter, tDDOSBan]); if(err) {console.error(err); process.exit(1);}
+  var [err, intCount]=await redis.myDDosCounterFun(redisVarDDOSCounter, tDDOSBan).toNBP(); if(err) {console.error(err); process.exit(1);}
   
   
   res.setHeader("Set-Cookie", ["sessionIDNormal="+sessionID+strCookiePropNormal, "sessionIDLax="+sessionID+strCookiePropLax, "sessionIDStrict="+sessionID+strCookiePropStrict]);
@@ -212,8 +223,8 @@ const handler=async function(req, res){
   
     // Refresh / create  redisVarSessionCache
   if(req.boCookieNormalOK){
-    var luaCountFunc=`local c=redis.call('GET',KEYS[1]); redis.call('EXPIRE',KEYS[1], ARGV[1]); return c`;
-    var [err, value]=await cmdRedis('EVAL',[luaCountFunc, 1, redisVarSessionCache, maxUnactivity]); if(err) {console.error(err); process.exit(1);}
+    //var [err, value]=await cmdRedis('EVAL',[luaDogFeederFun, 1, redisVarSessionCache, maxUnactivity]); if(err) {console.error(err); process.exit(1);}
+    var [err, value]=await redis.myDogFeederFun(redisVarSessionCache, maxUnactivity).toNBP(); if(err) {console.error(err); process.exit(1);}
     req.sessionCache=JSON.parse(value);
   } else { 
     var [err]=await setRedis(redisVarSessionCache,{}, maxUnactivity);   if(err) {console.error(err); process.exit(1);}

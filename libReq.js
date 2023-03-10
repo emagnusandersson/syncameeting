@@ -206,7 +206,7 @@ app.reqLogin=async function(){
   var [err]=await setRedis(sessionID+'_Login', objT, 300);   if(err) res.out500(err);
   var {fb}=rootDomain;
   var uLoginBack=uDomain+"/"+leafLoginBack;
-  var uTmp=UrlOAuth.fb+"?client_id="+fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&state="+state+"&auth_type=reauthenticate"; //+"&auth_type=reauthenticate"
+  var uTmp=UrlOAuth.fb+"?client_id="+fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&state="+state; //+"&auth_type=reauthenticate"
       //+'&display=popup'  +"&scope=public_profile"   +"&auth_type=reauthorize"
   res.writeHead(302, {'Location': uTmp}); res.end();
 }
@@ -399,7 +399,7 @@ app.reqDataDeleteStatus=async function(){
   // var objUrl=url.parse(req.url), qs=objUrl.query||'', objQS=querystring.parse(qs);
   // var confirmation_code=objQS.confirmation_code||'';
   var {confirmation_code=''}=objQS;
-  var [err,mess]=await cmdRedis('GET', [confirmation_code+'_DeleteRequest']); 
+  var [err,mess]=await getRedis(confirmation_code+'_DeleteRequest'); 
   if(err) {var mess=err.message;}
   else if(mess==null) {
     var [t,u]=getSuitableTimeUnit(timeOutDeleteStatusInfo);
