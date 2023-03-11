@@ -154,9 +154,11 @@ app.strCookiePropStrict=";"+StrCookiePropProt.concat("SameSite=Strict").join(';'
 var luaDDosCounterFun=`local c=redis.call('INCR',KEYS[1]); redis.call('EXPIRE',KEYS[1], ARGV[1]); return c`
 redis.defineCommand("myDDosCounterFun", { numberOfKeys: 1, lua: luaDDosCounterFun });
 
-var luaDogFeederFun=`local c=redis.call('GET',KEYS[1]); redis.call('EXPIRE',KEYS[1], ARGV[1]); return c`;
-//var luaDogFeederFun=`local c=redis.call('GET',KEYS[1]); if(c) then redis.call('EXPIRE',KEYS[1], ARGV[1]); end; return c`;
-redis.defineCommand("myDogFeederFun", { numberOfKeys: 1, lua: luaDogFeederFun });
+
+  // luaDogFeederFun => luaGetNExpire
+var luaGetNExpire=`local c=redis.call('GET',KEYS[1]); redis.call('EXPIRE',KEYS[1], ARGV[1]); return c`;
+//var luaGetNExpire=`local c=redis.call('GET',KEYS[1]); if(c) then redis.call('EXPIRE',KEYS[1], ARGV[1]); end; return c`;
+redis.defineCommand("myGetNExpire", { numberOfKeys: 1, lua: luaGetNExpire });
 
 
 const handler=async function(req, res){
@@ -223,8 +225,8 @@ const handler=async function(req, res){
   
     // Refresh / create  redisVarSessionCache
   if(req.boCookieNormalOK){
-    //var [err, value]=await cmdRedis('EVAL',[luaDogFeederFun, 1, redisVarSessionCache, maxUnactivity]); if(err) {console.error(err); process.exit(1);}
-    var [err, value]=await redis.myDogFeederFun(redisVarSessionCache, maxUnactivity).toNBP(); if(err) {console.error(err); process.exit(1);}
+    //var [err, value]=await cmdRedis('EVAL',[luaGetNExpire, 1, redisVarSessionCache, maxUnactivity]); if(err) {console.error(err); process.exit(1);}
+    var [err, value]=await redis.myGetNExpire(redisVarSessionCache, maxUnactivity).toNBP(); if(err) {console.error(err); process.exit(1);}
     req.sessionCache=JSON.parse(value);
   } else { 
     var [err]=await setRedis(redisVarSessionCache,{}, maxUnactivity);   if(err) {console.error(err); process.exit(1);}
@@ -241,7 +243,7 @@ const handler=async function(req, res){
   var strScheme='http'+(site.boTLS?'s':''),   strSchemeLong=strScheme+'://';
   var uDomain=strSchemeLong+domainName;
   var uSite=strSchemeLong+wwwSite;
-  extend(req, {site, sessionID, qs, objQS, siteName, strSchemeLong, wwwSite, uSite, uDomain, pathName, rootDomain:RootDomain[site.strRootDomain]});
+  extend(req, {site, sessionID, qs, objQS, siteName, strSchemeLong, wwwSite, uSite, uDomain, pathName, rootDomain:RootDomain[site.strRootDomain], redisVarSessionCache});
 
   var objReqRes={req, res};
   objReqRes.myMySql=new MyMySql(mysqlPool);

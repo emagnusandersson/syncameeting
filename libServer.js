@@ -1,7 +1,7 @@
 
 "use strict"
 app.runIdIP=async function(IP, idIP){ //check  idIP against the user-table and return diverse data
-  var siteName=this.req.siteName, site=this.site, TableName=site.TableName, userTab=TableName.userTab;
+  var {siteName}=this.req, {site}=this, {TableName}=site, {userTab}=TableName;
   var nArg=arguments.length, callback=arguments[nArg-1];
   var userInfoFrDBUpd={};
 
@@ -13,17 +13,17 @@ app.runIdIP=async function(IP, idIP){ //check  idIP against the user-table and r
   return [null, userInfoFrDBUpd]; 
 }
 
-
 app.checkIfUserInfoFrIP=async function(){ 
-  if('userInfoFrIP' in this.sessionCache && 'IP' in this.sessionCache.userInfoFrIP){ return [null,true]; }
+  var {req}=this, {redisVarSessionCache, sessionCache}=req
+  if('userInfoFrIP' in sessionCache && 'IP' in sessionCache.userInfoFrIP){ return [null,true]; }
   else{ 
-    this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-    var [err]=await setRedis(this.req.sessionID+'_Cache', this.sessionCache, maxUnactivity);  if(err) return [err];
+    extend(sessionCache, {userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}});
+    var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity);  if(err) return [err];
     return [null,false];
   }
 }
 app.checkIfAnySpecialist=function(){
-  var tmpEx=this.sessionCache.userInfoFrDB
+  var tmpEx=this.req.sessionCache.userInfoFrDB
   return Boolean(tmpEx.customer);
 }
 

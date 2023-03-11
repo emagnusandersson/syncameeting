@@ -143,6 +143,8 @@ app.copySomeToArr=function(arr, obj, arrSome){
 
 
 app.isSetObject=function(obj){if(typeof obj!='object' || obj===null) return false;   return Boolean(Object.keys(obj).length); } // {}, null => false
+//app.clearObject=function(obj){ for (var prop in obj) delete obj[prop]; }
+app.clearObject=function(obj){ var props = Object.getOwnPropertyNames(obj);  for (const prop of props) delete obj[prop]; }
 
 
 //

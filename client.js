@@ -1075,7 +1075,16 @@ if(boFF){
   window.on('beforeunload', function(){   });
 }
 
-
+  // Works on Chrome but not on Firefox 20230311
+// navigation.on('navigate', function(ev){  
+//   console.log("navigate-event, navigationType: "+ev.navigationType)
+// })
+window.on('pageshow', function(ev) {
+  console.log("pageshow-event, persisted: "+ev.persisted)
+  if (ev.persisted) {
+      //window.location.reload();
+  }
+})
 
 
 
@@ -1224,7 +1233,7 @@ var settingPop=settingPopExtend(createElement('div'));
 
 var deleteScheduleConfirmPop=deleteScheduleConfirmPopExtend(createElement('div'));
 var linkListPop=linkListPopExtend(createElement('div'));
-var tmpCss={position:'fixed', 'background-color':'#ccc', border:'1px solid', width:'calc(100% - 1.5em)', 'z-index':2, opacity:'0.92', 'max-height':'100%', top:'0px', 'max-width':'calc('+maxWidth+' - 1.5em)', height:'100%', 'font-size':'0.95em', transform:'translateX(-200%)', transition:'transform 0.5s, visibility 0.5s'};  // , 'overflow-y':'scroll' , 'overflow':'visible'
+var tmpCss={position:'fixed', 'background-color':'#ccc', border:'1px solid', width:'calc(100% - 1.5em)', 'z-index':2, opacity:'0.92', 'max-height':'100%', top:'0px', 'max-width':'calc('+maxWidth+' - 1.5em)', height:'100%', 'font-size':'0.95em', transform:'translateX(-200%)', transition:'transform 0.1s, visibility 0.1s'};  // , 'overflow-y':'scroll' , 'overflow':'visible'
 if(boIOS) extend(tmpCss, {'-webkit-transform':'translate3d(0,0,0)'}); 
 [settingPop.divContW, linkListPop.divContW].forEach(ele=>ele.css(tmpCss)); 
 

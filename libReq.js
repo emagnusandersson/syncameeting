@@ -224,24 +224,16 @@ app.ReqLoginBack=function(objReqRes){
   this.Str=[];
 }
 ReqLoginBack.prototype.go=async function(){
-  var self=this, {req, res}=this, {sessionID, objQS}=req;
+  var self=this, {req, res}=this, {sessionID, redisVarSessionCache, sessionCache, objQS}=req;
 
-  var redisVar=sessionID+'_Login'; 
-  var [err, sessionLogin]=await getRedis(redisVar,1); if(err) { res.out500(err); return; } 
+  var [err, sessionLogin]=await getRedis(sessionID+'_Login',1); if(err) { res.out500(err); return; } 
   if(!sessionLogin) { res.out500('!sessionLogin');  return; }
 
 
-
-  var redisVar=sessionID+'_Cache';
-  var [err, val]=await getRedis(redisVar,1);  if(err) { res.out500(err); return; }  this.sessionCache=val;
-  if(!this.sessionCache) { res.out500('!sessionCache');  return; } 
-  var [err]=await expireRedis(redisVar, maxUnactivity); if(err) {res.out500(err); return;};
-
-  if(!this.sessionCache.userInfoFrDB){
-    this.sessionCache.userInfoFrDB=extend({},specialistDefault);
-    var [err]=await setRedis(redisVar, this.sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
+  if(!sessionCache.userInfoFrDB){
+    sessionCache.userInfoFrDB=extend({},specialistDefault);
+    var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
   }
-  
   
   if('error' in objQS && objQS.error=='access_denied') { this.writeHtml(objQS.error); return}
 
@@ -276,14 +268,15 @@ ReqLoginBack.prototype.go=async function(){
 
   if(typeof idIP=='undefined') {console.log("Error idIP is empty");}  else if(typeof nameIP=='undefined' ) {nameIP=idIP;}
   
-  if('userInfoFrIP' in this.sessionCache){
-    if(this.sessionCache.userInfoFrIP.IP!==IP || this.sessionCache.userInfoFrIP.idIP!==idIP){
-      this.sessionCache.userInfoFrDB=extend({},specialistDefault);    
+  if('userInfoFrIP' in sessionCache){
+    var {IP:IPT, idIP:idIPT}=sessionCache.userInfoFrIP
+    if(IPT!==IP || idIPT!==idIP){
+      sessionCache.userInfoFrDB=extend({},specialistDefault);    
     }
   }
-  this.sessionCache.userInfoFrIP={IP,idIP,nameIP};
+  sessionCache.userInfoFrIP={IP,idIP,nameIP};
   
-  var [err]=await setRedis(sessionID+'_Cache', this.sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
+  var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
   
   extend(this,{IP,idIP});
 
@@ -316,8 +309,8 @@ ReqLoginBack.prototype.writeHtml=function(err){
 var boOK=`+JSON.stringify(boOK)+`;
 
 if(boOK){
-  var userInfoFrIPTT=`+JSON.stringify(this.sessionCache.userInfoFrIP)+`;
-  var userInfoFrDBTT=`+JSON.stringify(this.sessionCache.userInfoFrDB)+`;
+  var userInfoFrIPTT=`+JSON.stringify(this.req.sessionCache.userInfoFrIP)+`;
+  var userInfoFrDBTT=`+JSON.stringify(this.req.sessionCache.userInfoFrDB)+`;
   var CSRFCodeTT=`+JSON.stringify(this.CSRFCode)+`;
   window.opener.loginReturn(userInfoFrIPTT,userInfoFrDBTT,CSRFCodeTT);
   window.close();
@@ -551,7 +544,7 @@ app.SetupSql.prototype.createFunction=async function(siteName,boDropOnly){
           SET VidUser=LAST_INSERT_ID();
           #SET ICuuid=UUID();               # Uncomment when BIN_TO_UUID() becomes available
           #SET VBuuid=UUID_TO_BIN(ICuuid);  # Uncomment when BIN_TO_UUID() becomes available
-          #SET ICuuid=SUBSTR(RAND(), 3);     # Remove when BIN_TO_UUID() becomes available
+          #SET ICuuid=SUBSTR(RAND(), 3);    # Remove when BIN_TO_UUID() becomes available
           SET ICuuid=SUBSTR(CONCAT(MD5(RAND()),MD5(RAND())), 1, 36);     # Remove when BIN_TO_UUID() becomes available
           SET VBuuid=ICuuid;                # Remove when BIN_TO_UUID() becomes available
           INSERT INTO `+scheduleTab+` (uuid, idUser, lastActivity, MTab, vNames) VALUES (VBuuid, VidUser, now(), '', '');

@@ -21,7 +21,7 @@ ReqBE.prototype.mes=function(str){ this.Str.push(str); }
 ReqBE.prototype.mesO=function(str){
   if(str) this.Str.push(str);
   this.GRet.strMessageText=this.Str.join(', ');
-  this.GRet.userInfoFrIP=this.sessionCache.userInfoFrIP;
+  this.GRet.userInfoFrIP=this.req.sessionCache.userInfoFrIP;
   var objOut=copySome({}, this, ["dataArr", "GRet"]);
   this.res.end(serialize(objOut));	
 }
@@ -33,7 +33,7 @@ ReqBE.prototype.mesEO=function(errIn, statusCode=500){
   else{  var tmp=err.syscal||''; this.Str.push('E: '+tmp+' '+err.code);  }
   console.log(err.stack);
   GRet.strMessageText=this.Str.join(', ');
-  GRet.userInfoFrIP=this.sessionCache.userInfoFrIP; 
+  GRet.userInfoFrIP=this.req.sessionCache.userInfoFrIP; 
 
   //this.res.writeHead(500, {"Content-Type": MimeType.txt}); 
   var objOut=copySome({}, this, ["dataArr", "GRet"]);
@@ -43,31 +43,32 @@ ReqBE.prototype.mesEO=function(errIn, statusCode=500){
 
 
 //ReqBE.prototype.clearSessionCache=async function (){
-  //this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-  //var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity); if(err) return [err];
+  //this.req.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
+  //var redisVar=req.redisVarSessionCache;
+  //var [err]=await setRedis(redisVar, this.req.sessionCache, maxUnactivity); if(err) return [err];
   //this.GRet.userInfoFrDBUpd=extend({},specialistDefault);
 //}
 
 ReqBE.prototype.specSetup=async function (inObj){
-  var {req}=this, Ou={};
+  var {req}=this, Ou={}, {redisVarSessionCache, sessionCache}=req;
   var Role=null; if(typeof inObj=='object' && 'Role' in inObj) Role=inObj.Role;
   //if(!checkIfUserInfoFrIP()) { callback(null,[Ou]); return } 
   var [err,boOK]=await checkIfUserInfoFrIP.call(this);   if(err) return [err];
   if(!boOK) { return [null, [Ou]];} 
-  var tmp=this.sessionCache.userInfoFrIP, IP=tmp.IP, idIP=tmp.idIP;
+  var {IP, idIP}=sessionCache.userInfoFrIP;
 
   var [err, result]=await runIdIP.call(this, IP, idIP); if(err) return [err];
-  extend(this.GRet.userInfoFrDBUpd,result);    extend(this.sessionCache.userInfoFrDB,result);
+  extend(this.GRet.userInfoFrDBUpd, result);    extend(sessionCache.userInfoFrDB, result);
   
   //setSessionMain.call(this);
   //if(!this.checkIfAnySpecialist()){this.clearSession();} // If the user once clicked login, but never saved anything then logout
   //callback(null,[Ou]);
   
-  var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity); if(err) return [err];
+  var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity); if(err) return [err];
   if(!checkIfAnySpecialist.call(this)){ // If the user once clicked login, but never saved anything then logout
     //await clearSessionCache.call(this);
-    this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-    var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity); if(err) return [err];
+    extend(sessionCache, {userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}});
+    var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity); if(err) return [err];
     this.GRet.userInfoFrDBUpd=extend({},specialistDefault);
   } 
   return [null, [Ou]];
@@ -76,10 +77,10 @@ ReqBE.prototype.specSetup=async function (inObj){
 
 
 ReqBE.prototype.logout=async function (inObj){
-  var {req}=this, flow=req.flow;
+  var {req}=this, {redisVarSessionCache, sessionCache}=req;
   //resetSessionMain.call(this);
-  this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-  var [err]=await setRedis(req.sessionID+'_Cache', this.sessionCache, maxUnactivity); if(err) return [err];
+  extend(sessionCache, {userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}});
+  var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity); if(err) return [err];
   this.GRet.userInfoFrDBUpd=extend({},specialistDefault);
   this.mes('Logged out'); return [null, [0]];
 }
@@ -102,7 +103,7 @@ ReqBE.prototype.getSchedule=async function (inObj){
 }
 
 ReqBE.prototype.listSchedule=async function (inObj){
-  var {req}=this, {site}=req, sessionCache=this.sessionCache, {userTab, scheduleTab}=site.TableName;
+  var {req}=this, {site, sessionCache}=req, {userTab, scheduleTab}=site.TableName;
   var Ou={}, Sql=[];
   
   if(!isSetObject(sessionCache.userInfoFrIP)){ return [null,[Ou]]; }
@@ -111,7 +112,8 @@ ReqBE.prototype.listSchedule=async function (inObj){
   Sql.push("DELETE FROM "+scheduleTab+" WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();");
   Sql.push("SELECT uuid, title, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(lastActivity) AS lastActivity FROM "+scheduleTab+" s JOIN "+userTab+" u ON s.idUser=u.idUser WHERE u.IP=? AND u.idIP=?;");  // BIN_TO_UUID(uuid) AS uuid
   
-  var sql=Sql.join('\n'),   Val=[sessionCache.userInfoFrIP.IP, sessionCache.userInfoFrIP.idIP];  //Val=[idUser]; 
+  var {IP,idIP}=sessionCache.userInfoFrIP;
+  var sql=Sql.join('\n'),   Val=[IP,idIP];  //Val=[idUser]; 
   var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
   var arrSchedule=results[1];
   var n=arrSchedule.length;
@@ -124,11 +126,11 @@ ReqBE.prototype.listSchedule=async function (inObj){
 }
 
 ReqBE.prototype.saveSchedule=async function (inObj){
-  var {req}=this, {site, siteName}=req, sessionCache=this.sessionCache;
+  var {req}=this, {site, siteName, sessionCache}=req;
   var scheduleTab=site.TableName.scheduleTab;
   var Ou={}, Sql=[];
 
-  var IP='fb', idIP='';  if(isSetObject(sessionCache.userInfoFrIP)){ IP=sessionCache.userInfoFrIP.IP; idIP=sessionCache.userInfoFrIP.idIP }
+  var IP='fb', idIP='';  if(isSetObject(sessionCache.userInfoFrIP)){ ({IP,idIP}=sessionCache.userInfoFrIP); }
   var Val=[IP, idIP];
   
   
@@ -138,8 +140,8 @@ ReqBE.prototype.saveSchedule=async function (inObj){
     if(typeof value=='string') inObj[name]=myJSEscape(value);
   }
   
-  var lastActivity=0, uuid=null;
-  if('uuid' in inObj )   { lastActivity=inObj.lastActivity; uuid=inObj.uuid;}   Val.push(lastActivity, uuid);
+  var {lastActivity=0, uuid=null}=inObj;
+  Val.push(lastActivity, uuid);
 
   //eval(extractLocSome('inObj',['title','MTab','unit','intFirstDayOfWeek','intDateAlwaysInWOne','vNames','hFilter','dFilter','start']));
   var tmp=copySomeToArr([], inObj, ['title','MTab','unit','intFirstDayOfWeek','intDateAlwaysInWOne','start', 'vNames','hFilter','dFilter']);  array_mergeM(Val,tmp);
@@ -161,11 +163,11 @@ ReqBE.prototype.saveSchedule=async function (inObj){
 }
 
 ReqBE.prototype.deleteSchedule=async function (inObj){
-  var {req}=this, {site, siteName}=req, sessionCache=this.sessionCache, {userTab, scheduleTab}=site.TableName;
+  var {req}=this, {site, siteName, sessionCache}=req, {userTab, scheduleTab}=site.TableName;
   var Ou={}, Sql=[];
 
   if(isSetObject(sessionCache.userInfoFrIP)){
-    var IP=sessionCache.userInfoFrIP.IP, idIP=sessionCache.userInfoFrIP.idIP, uuid=inObj.uuid;//,  idUser=sessionCache.userInfoFrDB.customer.idUser;
+    var {IP,idIP}=sessionCache.userInfoFrIP, uuid=inObj.uuid;//,  idUser=sessionCache.userInfoFrDB.customer.idUser;
 
     Sql.push("CALL "+siteName+"delete(?,?,?);");
     var Val=[]; Val.push(IP, idIP, uuid);
@@ -184,17 +186,16 @@ ReqBE.prototype.deleteSchedule=async function (inObj){
 
 
 ReqBE.prototype.go=async function (){
-  var {req, res}=this, {site}=req;
+  var {req, res}=this, {site, redisVarSessionCache, sessionCache}=req;
 
-  var redisVar=req.sessionID+'_Cache';
-  var [err, val]=await getRedis(redisVar,1);  if(err) {this.mesEO(err);  return; }    this.sessionCache=val;
-  if(!this.sessionCache || typeof this.sessionCache!='object') { 
+  //var [err, val]=await getRedis(redisVarSessionCache,1);  if(err) {this.mesEO(err);  return; }    this.sessionCache=val;
+  if(!sessionCache || typeof sessionCache!='object') { 
     //resetSessionMain.call(this);
-    this.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-    var [err]=await setRedis(redisVar, this.sessionCache, maxUnactivity); if(err){ this.mesEO(err); return;}
+    extend(sessionCache, {userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}});
+    var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity); if(err){ this.mesEO(err); return;}
   }
 
-  var [err]=await expireRedis(redisVar, maxUnactivity); if(err){ this.mesEO(err); return;}
+  var [err]=await expireRedis(redisVarSessionCache, maxUnactivity); if(err){ this.mesEO(err); return;}
   
   
   var jsonInput;
