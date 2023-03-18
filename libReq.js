@@ -345,39 +345,55 @@ function parseSignedRequest(signedRequest, secret) {
 }
 
 
-app.deleteOne=async function(user_id){ // 
+app.deleteUser=async function(idUser){ // 
   var {req}=this, {site}=req, {userTab}=site.TableName;
   var Ou={};
 
   var Sql=[], Val=[];
-  Sql.push("DELETE FROM "+userTab+" WHERE idIP=?;"); Val.push(user_id);
+  Sql.push("DELETE FROM "+userTab+" WHERE idIP=?;"); Val.push(idUser);
   var sql=Sql.join('\n');
-  var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
-  var c=results.affectedRows;
-
-  return [null, c];
+  if(boMysql) {
+    var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
+    var nDelU=results.affectedRows, nDelS=NaN;
+  } else{
+    var [err, IdSch]=await redis.smembers(idUser).toNBP(); if(err) return [err];
+    if(IdSch.length==0) return [null, {nDelU:0,nDelS:0}];
+    var [err, result]=await redis.del(...IdSch).toNBP(); if(err) return [err];
+    var nDelS=result||0;
+    var [err, result]=await redis.del(idUser).toNBP(); if(err) return [err];
+    var nDelU=result||0;
+  }
+  debugger
+  return [null, {nDelU,nDelS}];
 }
 
 app.reqDataDelete=async function(){  //
   var {req, res}=this, {objQS, uSite, siteName}=req;
 
-  //if(req.method=='GET' && boDbg){ var objUrl=url.parse(req.url), qs=objUrl.query||'', strData=qs; } else 
-  if(req.method=='POST'){
-    //var strData=await app.getPost.call(this, req);
-    var buf=await new Promise(resolve=>{   var myConcat=concat(bT=>resolve(bT));    req.pipe(myConcat);   })
-    var strData=buf.toString();
+  if(boDbgUseGetForFBAPI){
+    if(req.method=='GET'){ var objUrl=url.parse(req.url), qs=objUrl.query||'', strData=qs; } 
+    else {res.outCode(400, "Get request wanted"); return; }
+  }else {
+    if(req.method=='POST'){
+      //var strData=await app.getPost.call(this, req);
+      var buf=await new Promise(resolve=>{   var myConcat=concat(bT=>resolve(bT));    req.pipe(myConcat);   })
+      var strData=buf.toString();
+    }
+    else {res.outCode(400, "Post request wanted"); return; }
   }
-  else {res.outCode(400, "Post request wanted"); return; }
   
   var Match=strData.match(/signed_request=(.*)/); if(!Match) {res.outCode(400, "String didn't start with \"signed_request=\""); return; }
   var strDataB=Match[1];
 
   var [err, data]=parseSignedRequest(strDataB, req.rootDomain.fb.secret); if(err) { res.outCode(400, "Error in parseSignedRequest: "+err.message); return; }
-  var {user_id}=data;
+  var {user_id:idIP}=data, IP='fb';
+  var idUser=prefixRedis+IP+'_'+idIP
 
-  var [err,c]=await deleteOne.call(this, user_id);
-  if(c==1) var strPlur='entry'; else var strPlur='entries';
-  var mess='User: '+user_id+': '+c+' '+strPlur+' deleted';
+  var [err,objT]=await deleteUser.call(this, idUser); if(err) { res.out500(err); return; }
+  var {nDelU,nDelS}=objT
+  var strPlurU=(nDelU==1)?'':'s';
+  var strPlurS=(nDelS==1)?'':'s';
+  var mess='User: '+idIP+': '+nDelU+' user'+strPlurU+' deleted, '+nDelS+' schedule'+strPlurS+' deleted';
   
   console.log('reqDataDelete: '+mess);
   var confirmation_code=genRandomString(32);
@@ -402,6 +418,38 @@ app.reqDataDeleteStatus=async function(){
   res.end(mess);
 }
 
+app.reqDeAuthorize=async function(){  //
+  var {req, res}=this, {objQS, uSite, site}=req, {siteName}=site
+
+  if(boDbgUseGetForFBAPI){
+    if(req.method=='GET'){ var objUrl=url.parse(req.url), qs=objUrl.query||'', strData=qs; } 
+    else {res.outCode(400, "Get request wanted"); return; }
+  }else {
+    if(req.method=='POST'){
+      //var strData=await app.getPost.call(this, req);
+      var buf=await new Promise(resolve=>{   var myConcat=concat(bT=>resolve(bT));    req.pipe(myConcat);   })
+      var strData=buf.toString();
+    }
+    else {res.outCode(400, "Post request wanted"); return; }
+  }
+
+  var Match=strData.match(/signed_request=(.*)/); if(!Match) {res.outCode(400, "String didn't start with \"signed_request=\""); return; }
+  var strDataB=Match[1];
+
+  var [err, data]=parseSignedRequest(strDataB, req.rootDomain.fb.secret); if(err) { res.outCode(400, "Error in parseSignedRequest: "+err.message); return; }
+
+  var {user_id:idIP}=data, IP='fb';
+  var idUser=prefixRedis+IP+'_'+idIP
+  var [err, nRemaining]=await redis.scard(idUser).toNBP(); if(err) return [err];
+  nRemaining=Number(nRemaining)
+  if(nRemaining) var mess="DeAuthorize-request received. All data is automatically deleted 30 days after last access. If you want to delete them sooner, you can use the dataDelete-request. ("+nRemaining+" schedule(s) currently stored.)";
+  else var mess="No schedules found for that user_id."
+
+  console.log('reqDeAuthorize (id: '+data.user_id+'), (nSchedules: '+nRemaining+')');
+  
+  res.setHeader('Content-Type', MimeType.json); 
+  res.end(JSON.stringify({ mess }));
+}
 
 
 /******************************************************************************

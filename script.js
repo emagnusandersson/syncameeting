@@ -5,7 +5,8 @@ import https from 'https';
 import url from "url";
 import path from "path";
 import fs, {promises as fsPromises} from "fs";
-import mysql from 'mysql';
+app.boMysql=false;
+//import mysql from 'mysql';
 import concat from 'concat-stream';
 import fetch from 'node-fetch';
 
@@ -21,9 +22,12 @@ import ip from 'ip';
 import serialize from 'serialize-javascript';
 import mime from "mime";
 import minimist from 'minimist';
+import * as dotenv from 'dotenv'
+dotenv.config();
 var argv=minimist(process.argv.slice(2));
 import './lib.js';
-extend(app, {http, url, path, fsPromises, mysql, concat, mime, fetch, formidable, myCrypto, zlib, ip, serialize, mime});
+extend(app, {http, url, path, fsPromises, concat, mime, fetch, formidable, myCrypto, zlib, ip, serialize, mime});
+if(boMysql) extend(app, {mysql});
 
 import './libServerGeneral.js';
 import './libServer.js';
@@ -38,6 +42,7 @@ app.boHeroku=strInfrastructure=='heroku';
 app.boAF=strInfrastructure=='af'; 
 app.boLocal=strInfrastructure=='local'; 
 app.boDO=strInfrastructure=='do'; 
+app.boRender=strInfrastructure=='render'; 
 
 app.StrValidSqlCalls=['createTable', 'dropTable', 'createFunction', 'dropFunction', 'truncate']; // , 'createDummy', 'createDummies'
 
@@ -62,8 +67,22 @@ if(StrUnknown.length){ console.log('Unknown arguments: '+StrUnknown.join(', '));
 //   app.redisClient=redis.createClient(urlRedis, {no_ready_check: true}); //
 // }else { app.redisClient=redis.createClient();}
 
-var REDIS_URL="redis://localhost:6379"
-app.redis = new Redis(REDIS_URL);
+var REDIS_URL=process.env.REDIS_URL||"redis://localhost:6379"
+app.redis = new Redis(REDIS_URL); //, {keyPrefix: "syn:"}
+
+var LeafLuaFile=['saveSch.lua', 'deleteSch.lua', 'deleteUser.lua', 'pollDeletion.lua'];
+for(var leafLuaFile of LeafLuaFile){
+  var [err, buf]=await fsPromises.readFile('./lua/'+leafLuaFile).toNBP();    if(err) {console.error(err); process.exit(-1);}
+  var strData=buf.toString();
+  var arrT=strData.split('\n',1), strFirstLine=arrT[0].trim();
+  strFirstLine=myTrimStart(strFirstLine, '-').trim();
+  var objFirstLine=deserialize(strFirstLine);   //JSON.parse(strFirstLine);
+  var objT=path.parse(leafLuaFile), {name}=objT
+  var {nKey, strName=name}=objFirstLine
+  redis.defineCommand(strName, { numberOfKeys: nKey, lua: strData });
+  
+}
+
 
   // Default config variables (If you want to change them I suggest you create a file config.js and overwrite them there)
 extend(app, {uriDB:'', boDbg:0, boAllowSql:1, port:5000, levelMaintenance:0, googleSiteVerification:'googleXXX.html',
@@ -75,9 +94,12 @@ extend(app, {uriDB:'', boDbg:0, boAllowSql:1, port:5000, levelMaintenance:0, goo
   timeOutDeleteStatusInfo:3600,
   RootDomain:{},
   Site:{},
+  boDbgUseGetForFBAPI:false,
+  prefixRedis:'syn:'
 });
 
 port=argv.p||argv.port||5000;
+//port=process.env.port || 5000
 if(argv.h || argv.help) {helpTextExit(); }
 
 var strConfig;
@@ -105,7 +127,7 @@ await import('./libReqBE.js');
 await import('./libReq.js'); 
 
 
-app.mysqlPool=setUpMysqlPool();
+if(boMysql) app.mysqlPool=setUpMysqlPool();
 SiteExtend();
 
   // Do db-query if --sql XXXX was set in the argument
@@ -246,7 +268,7 @@ const handler=async function(req, res){
   extend(req, {site, sessionID, qs, objQS, siteName, strSchemeLong, wwwSite, uSite, uDomain, pathName, rootDomain:RootDomain[site.strRootDomain], redisVarSessionCache});
 
   var objReqRes={req, res};
-  objReqRes.myMySql=new MyMySql(mysqlPool);
+  if(boMysql) objReqRes.myMySql=new MyMySql(mysqlPool);
   if(levelMaintenance){res.outCode(503, "Down for maintenance, try again in a little while."); return;}
   if(pathName=='/') { await reqIndex.call(objReqRes);   }
   else if(pathName=='/'+leafBE){  var reqBE=new ReqBE(objReqRes);  await reqBE.go();    }
@@ -256,12 +278,12 @@ const handler=async function(req, res){
   else if(pathName=='/'+leafLoginBack){    var reqLoginBack=new ReqLoginBack(objReqRes);    await reqLoginBack.go();    }
   else if(pathName=='/'+leafDataDelete){  await reqDataDelete.call(objReqRes);  }
   else if(pathName=='/'+leafDataDeleteStatus){  await reqDataDeleteStatus.call(objReqRes);  }
-  //else if(pathName=='/'+leafDeAuthorize){  await reqDeAuthorize.call(objReqRes);  }
+  else if(pathName=='/'+leafDeAuthorize){  await reqDeAuthorize.call(objReqRes);  }
   else if(pathName=='/createDumpCommand'){  var str=createDumpCommand(); res.out200(str);     }
   else if(pathName=='/debug'){    debugger;  res.end();}
   else if(pathName=='/'+googleSiteVerification) res.end('google-site-verification: '+googleSiteVerification);
   else {res.out404("404 Not Found\n"); return; }
-  objReqRes.myMySql.fin();
+  if(boMysql) objReqRes.myMySql.fin();
   
   
 

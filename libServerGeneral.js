@@ -232,13 +232,13 @@ app.getIP=function(req){
   return false
 }
 
-app.luaCountFunc=`
-local boSessionExist=redis.call('EXISTS',KEYS[1]);
-local c;
-if(boSessionExist>0) then c=redis.call('INCR',KEYS[2]); redis.call('EXPIRE',KEYS[2], ARGV[1]);
-else c=redis.call('INCR',KEYS[3]); redis.call('EXPIRE', KEYS[3], ARGV[1]);
-end;
-return c`;
+// app.luaCountFunc=`
+// local boSessionExist=redis.call('EXISTS',KEYS[1]);
+// local c;
+// if(boSessionExist>0) then c=redis.call('INCR',KEYS[2]); redis.call('EXPIRE',KEYS[2], ARGV[1]);
+// else c=redis.call('INCR',KEYS[3]); redis.call('EXPIRE', KEYS[3], ARGV[1]);
+// end;
+// return c`;
 
 
 globalThis.CacheUriT=function(){

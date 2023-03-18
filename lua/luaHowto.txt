@@ -1,0 +1,4 @@
+// Normal execution
+redis-cli --eval script.lua
+// Debugging
+redis-cli --ldb --eval script.lua

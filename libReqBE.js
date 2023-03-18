@@ -38,6 +38,7 @@ ReqBE.prototype.mesEO=function(errIn, statusCode=500){
   //this.res.writeHead(500, {"Content-Type": MimeType.txt}); 
   var objOut=copySome({}, this, ["dataArr", "GRet"]);
   this.res.end(serialize(objOut));
+  debugger
 }
 
 
@@ -96,9 +97,24 @@ ReqBE.prototype.getSchedule=async function (inObj){
   FROM `+scheduleTab+` WHERE uuid=?;`);  //BIN_TO_UUID(uuid) AS uuid  // UUID_TO_BIN(?)
 
   var sql=Sql.join('\n'),   Val=[inObj.uuid];
-  var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
-  var c=results[1].length; if(c!=1) {  return [new ErrorClient(c+" rows found for that uuid")];}
-  Ou.row=results[1][0];  
+  if(boMysql) {
+    var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
+    var c=results[1].length; if(c!=1) {  return [new ErrorClient(c+" rows found for that uuid")];}
+    Ou.row=results[1][0];
+  } else{
+    var idSch=prefixRedis+inObj.uuid
+    var [err, result]=await redis.hgetall(idSch).toNBP(); if(err) return [err];
+    //const obj = {};   for (let i = 0; i < result.length; i += 2) { obj[result[i]] = result[i + 1]; }
+    var boEmpty=isEmpty(result);
+    if(boEmpty) {  return [new ErrorClient("nothing found for that uuid")];}
+    var {strSch, lastActivity}=result;
+    lastActivity=Number(lastActivity)
+    var objSch=deserialize(strSch);
+    extend(objSch,{lastActivity})
+    Ou.row=objSch;
+  }
+
+  //debugger
   return [null, [Ou]];
 }
 
@@ -114,14 +130,34 @@ ReqBE.prototype.listSchedule=async function (inObj){
   
   var {IP,idIP}=sessionCache.userInfoFrIP;
   var sql=Sql.join('\n'),   Val=[IP,idIP];  //Val=[idUser]; 
-  var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
-  var arrSchedule=results[1];
-  var n=arrSchedule.length;
-  for(var i=0;i<n;i++) {
-    var row=arrSchedule[i], len=listCol.KeyCol.length, rowN=Array(len);
-    for(var j=0;j<len;j++){ var key=listCol.KeyCol[j]; rowN[j]=row[key]; }
-    Ou.tab.push(rowN);
-  }   
+  if(boMysql) {
+    var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
+    var arrSchedule=results[1];
+    var n=arrSchedule.length;
+    for(var i=0;i<n;i++) {
+      var row=arrSchedule[i], len=listCol.KeyCol.length, rowN=Array(len);
+      for(var j=0;j<len;j++){ var key=listCol.KeyCol[j]; rowN[j]=row[key]; }
+      Ou.tab.push(rowN);
+    }
+  } else{
+    var idUser=prefixRedis+IP+'_'+idIP
+    var [err, result]=await redis.pollDeletion(idUser).toNBP(); if(err) return [err];
+    var [err, IdSch]=await redis.smembers(idUser).toNBP(); if(err) return [err];
+    var nSch=IdSch.length;
+    for(var i=0;i<nSch;i++) {
+      var idSch=IdSch[i]
+      var [err, result]=await redis.hgetall(idSch).toNBP(); if(err) return [err];
+      var {idUser, strSch, lastActivity, created}=result
+      lastActivity=Number(lastActivity); created=Number(created);
+      var objSch=deserialize(strSch), {title}=objSch;
+      var idSchWOPrefix=idSch.substring(prefixRedis.length)
+      var rowN=[idSchWOPrefix, title, created, lastActivity]
+      Ou.tab.push(rowN); //['7c5556cbe87ccbf60388a0becd96fc0ff57c', '', 1678498453, 1678498458]
+      //debugger
+    }
+  }
+  //debugger
+
   return [null, [Ou]];
 }
 
@@ -148,16 +184,30 @@ ReqBE.prototype.saveSchedule=async function (inObj){
 
   Sql.push("CALL "+siteName+"save(?,?,?,?, ?,?,?,?,?,?,?,?,?);");
   var sql=Sql.join('\n'); 
-  var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
-  var len=results.length; 
-  if(len==2){
-    var strTmp=results[0][0].mess; if(results[0][0].mess=='boOld') {strTmp="Someone else has changed the table, use reload to get the latest version";  } 
-    return [new ErrorClient(strTmp)];
+  if(boMysql) {
+    var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
+    var len=results.length; 
+    if(len==2){
+      var strTmp=results[0][0].mess; if(results[0][0].mess=='boOld') {strTmp="Someone else has changed the table, use reload to get the latest version";  } 
+      return [new ErrorClient(strTmp)];
+    }
+    var c=results[0][0].nUpd; if(c!=1) { return [new ErrorClient("updated rows: "+c)]; }
+    var rowA=results[len-2][0];
+    //rowA.lastActivity=
+    copySome(Ou,rowA,['lastActivity', 'uuid']);  
+  } else{
+    var objSch=copySome({}, inObj, ['title','MTab','unit','intFirstDayOfWeek','intDateAlwaysInWOne','start', 'vNames','hFilter','dFilter'])
+    if(!uuid) uuid=genRandomString(32)
+    var strSch=serialize(objSch);
+    var idUser=prefixRedis+IP+'_'+idIP
+    var idSch=prefixRedis+uuid
+    var [err, mess]=await redis.saveSch(idUser, idSch, strSch, lastActivity, unixNow()).toNBP(); if(err) return [err];
+    if(mess=='old') {var strTmp="Someone else has changed the table, use reload to get the latest version"; return [new ErrorClient(strTmp)]; }
+    extend(Ou,{uuid, lastActivity})
   }
-  var c=results[0][0].nUpd; if(c!=1) { return [new ErrorClient("updated rows: "+c)]; }
-  var rowA=results[len-2][0];
-  //rowA.lastActivity=
-  copySome(Ou,rowA,['lastActivity', 'uuid']);  
+  //debugger
+
+
   return [null, [Ou]];
 
 }
@@ -172,12 +222,24 @@ ReqBE.prototype.deleteSchedule=async function (inObj){
     Sql.push("CALL "+siteName+"delete(?,?,?);");
     var Val=[]; Val.push(IP, idIP, uuid);
     var sql=Sql.join('\n'); 
-    var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
-    var len=results.length, rowLast=results[len-2];
-    if('mess' in rowLast) { return [new ErrorClient(rowLast.mess)]; }
-    var nDelete=results[0][0].nDelete; if(nDelete!=1) { return [new ErrorClient(nDelete+" schedules deleted")]; }
-    Ou.nRemaining=results[1][0].nRemaining;
+    if(boMysql) {
+      var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
+      var len=results.length, rowLast=results[len-2];
+      if('mess' in rowLast) { return [new ErrorClient(rowLast.mess)]; }
+      var nDelete=results[0][0].nDelete; if(nDelete!=1) { return [new ErrorClient(nDelete+" schedules deleted")]; }
+      Ou.nRemaining=results[1][0].nRemaining;
+    } else{
+      var idUser=prefixRedis+IP+'_'+idIP
+      var idSch=prefixRedis+uuid
+      var [err, result]=await redis.deleteSch(idUser, idSch).toNBP(); if(err) return [err];
+      //var [mess, boDeleted=false, boDeletedS=false, nRemaining=false]=result
+      var mess=result
+      this.mes(mess);
+      //extend(Ou, {boDeleted, boDeletedS, nRemaining});
+    }
+    //debugger
     
+
     return [null, [Ou]];
   }  
 }

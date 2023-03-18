@@ -5,11 +5,17 @@ app.runIdIP=async function(IP, idIP){ //check  idIP against the user-table and r
   var nArg=arguments.length, callback=arguments[nArg-1];
   var userInfoFrDBUpd={};
 
+
   var Sql=[];
   Sql.push("SELECT * FROM "+userTab+" WHERE IP=? AND idIP=?;");
   var sql=Sql.join('\n'), Val=[IP, idIP];
-  var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
-  var c=results.length;   userInfoFrDBUpd.customer=c==1?results[0]:0;   if(c>1){ console.log("count>1 ("+c+")"); }
+  if(boMysql) {
+    var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
+    var c=results.length;   userInfoFrDBUpd.customer=c==1?results[0]:0;   if(c>1){ console.log("count>1 ("+c+")"); }
+  } else{
+    userInfoFrDBUpd.customer={IP,idIP}
+  }
+  //debugger
   return [null, userInfoFrDBUpd]; 
 }
 

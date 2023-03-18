@@ -19,6 +19,13 @@ app.isAlpha=function(str){  var regEx = /^[a-zA-Z0-9]+$/;  return str.match(regE
 //function pad2(n){ return ('0'+n).slice(-2);}
 app.pad2=function(n) {return (n<10?'0':'')+n;}
 
+  // Trim functions that can trim for other characters than whitespace
+app.myTrimStart=function(str,charlist=String.raw`\s`){
+  return str.replace(new RegExp("^[" + charlist + "]+"), "");
+};
+app.myTrimEnd=function(str,charlist=String.raw`\s`){
+  return str.replace(new RegExp("[" + charlist + "]+$"), "");
+};
 
 //
 // Array
@@ -118,14 +125,15 @@ app.StrComp=function(A,B){var lA=A.length; if(lA!==B.length) return false; for(v
 
 
 
+app.isEmpty=function(obj) {    return Object.keys(obj).length === 0;  }
 app.copy=function(o, isdeep) {
-    if (o===undefined || o===null || ['string', 'number', 'boolean'].indexOf(typeof o)!==-1)
-        return o;
-    var n= o instanceof Array? [] : {};
-    for (var k in o)
-        if (o.hasOwnProperty(k))
-            n[k]= isdeep? copy(o[k], isdeep) : o[k];
-    return n;
+  if (o===undefined || o===null || ['string', 'number', 'boolean'].indexOf(typeof o)!==-1)
+    return o;
+  var n= o instanceof Array? [] : {};
+  for (var k in o)
+    if (o.hasOwnProperty(k))
+      n[k]= isdeep? copy(o[k], isdeep) : o[k];
+  return n;
 }
 app.copySome=function(a,b,Str){for(var i=0;i<Str.length;i++) { var name=Str[i]; a[name]=b[name]; } return a; }
 app.object_values=function(obj){
