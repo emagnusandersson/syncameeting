@@ -233,7 +233,7 @@ app.popupHover=function(elArea, elBubble, tClose=0){
   }
   var elBlanket, timer, boIOSTmp=boTouch;
   if(boIOSTmp){
-    elBlanket=createElement('div').css({'background':'#555',opacity:0,'z-index': 9001,top:'0px',left:'0px',width:'100%',position:'fixed',height:'100%'});
+    elBlanket=createElement('div').css({background:'#000', opacity:0.25, 'z-index': 9001,top:'0px',left:'0px',width:'100%',position:'fixed',height:'100%'});
     elBlanket.on('click', closeFunc);
   }
   if(boTouch){

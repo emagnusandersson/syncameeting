@@ -2,7 +2,7 @@
 globalThis.langHtml={
 Cancel:'Cancel',
 Yes:'Yes',
-Save:'Save',
+Save:'Sa­ve',
 None:'None',
 All:'All',
 Default:'Default',

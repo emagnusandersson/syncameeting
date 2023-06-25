@@ -2,6 +2,10 @@
 
 "use strict"
 
+
+// Should be saved on every change (perhaps?!?) ... and preferabley updated on any other who is currently visiting the site.
+// onbeforeunload event to inform of unsaved changes
+
 //function\(([\w,]+)\)\s*\{\s*return *
 
 var mesOMake=function(glue){ return function(str){
@@ -65,7 +69,7 @@ xmlns:fb="http://www.facebook.com/2008/fbml">`);
 
 
   Str.push("<meta name='viewport' id='viewportMy' content='width=device-width, initial-scale=1, minimum-scale=1'/>");
-  Str.push('<meta name="theme-color" content="#fff"/>');
+  //Str.push('<meta name="theme-color" content="#fff"/>');
 
 
   var strTitle='Free meeting synchronizer';
@@ -103,7 +107,8 @@ xmlns:fb="http://www.facebook.com/2008/fbml">`);
   Str.push(`<style>
 :root { --maxWidth:800px; height:100%}
 body {margin:0; height:100%; display:flow-root; font-family:arial, verdana, helvetica;}
-.mainDivR { box-sizing:border-box; margin: 0em auto; width:100%; display:flex; max-width:var(--maxWidth) }
+viewFront {margin:0; height:100%; display:flow-root; max-width:var(--maxWidth)}
+.mainDivR { box-sizing:border-box; margin: 0em auto; width:100%; display:flex; max-width:var(--maxWidth)}
 h1 { font-size:1.6rem; font-weight:bold; letter-spacing:0.15em; text-shadow:-1px 0 grey, 1px 0 grey, 0 -1px grey, 0 1px grey, -1px -1px grey, 1px 1px grey, -1px 1px grey, 1px -1px grey; display:inline-block  }
 </style>`);
 
@@ -181,11 +186,14 @@ globalThis.uuid=`+JSON.stringify(uuid)+`;
   Str.push("</head>");
   Str.push(`<body>
 <title>`+strTitle+`</title>
+<div id=viewFront>
 <div id=divEntryBar class="mainDivR" style="align-items:center; min-height:2rem; flex:0 0 auto"></div>
-<div id=divH1 class="mainDivR" style="border:solid 1px; color:black;  padding:0em; margin:0 auto 0; flex:0 0 auto; align-items:center; justify-content:center"><h1>`+strH1+`</h1></div>
+<div id=divLoginInfo class="mainDivR" style="align-items:center; min-height:2rem; flex:0 0 auto"></div>
+<div id=divH1 class="mainDivR" style="border:solid 1px;  padding:0em; margin:0 auto 0; flex:0 0 auto; align-items:center; justify-content:center "><h1>`+strH1+`</h1></div>
+</div>
 <noscript><div style="text-align:center">Javascript is disabled, so this app won't work.</div></noscript>
 </body>
-</html>`);
+</html>`); 
 
 
   var str=Str.join('\n'); 

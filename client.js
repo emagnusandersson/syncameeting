@@ -145,6 +145,7 @@ var divMessageTextCreate=function(){
     if(time)     messTimer=setTimeout(resetMess, time*1000);
     imgBusyLoc.toggle(Boolean(boRot));
   };
+  el.on('click',el.resetMess)
   var messTimer;
   el.addClass('message');
   return el;
@@ -159,10 +160,10 @@ var divMessageTextCreate=function(){
 
 var loginInfoToggleStuff=function(){
   var boIn=Boolean(isSetObject(userInfoFrIP));
-  divLoginInfo.setStat();
-  divEntryBar.visible(); // This only needed the first time really
-  divEntryBar.toggle(!boIn);
-  butLinkList.toggle(boIn); //butLogin.toggle(!boIn);
+  viewFront.divLoginInfo.setStat();
+  viewFront.divEntryBar.visible(); // This only needed the first time really
+  viewFront.divEntryBar.toggle(!boIn);
+  viewFront.butLinkList.toggle(boIn); //butLogin.toggle(!boIn);
   //if(boIn) {linkListPop.show(); butLogin.hide();}  else {linkListPop.hide(); butLogin.show();}
 }
 
@@ -215,42 +216,40 @@ var loginPopExtend=function(el){
   
 
   
-  var hovHelpHead=hovHelp.cloneNode(1).css({'margin-left':'1em'}),  bub=createElement('div').myHtml(langHtml.loginPop.headHelp);     popupHover(hovHelpHead,bub);  
+  var hovHelpHead=hovHelp.cloneNode(1).css({'margin-left':'1em', 'vertical-align':'middle'}),  bub=createElement('div').myHtml(langHtml.loginPop.headHelp);     popupHover(hovHelpHead,bub);  
   var head=createElement('span').myAppend(langHtml.loginPop.loginMethods);
-  var pHead=createElement('p').myAppendHtml(head,hovHelpHead);
+  var divHead=createElement('div').myAppendHtml(head,hovHelpHead);
 
   
   var strButtonSize='3em';
-  var fbIm=createElement('img').on('click', function(){popupWin('fb','');}).prop({src:uFB, alt:"fb"}).css({position:'relative',top:'0.4em'}); //,width:strButtonSize,heigth:strButtonSize
+  var fbIm=createElement('img').on('click', function(){popupWin('fb','');}).prop({src:uFB, alt:"fb"});
   // var hovHelpFb=hovHelp.cloneNode(1).css({margin:'0 0 0 1em'}),  bub=createElement('div').myHtml(langHtml.loginPop.fbComment);     popupHover(hovHelpFb,bub);  
 
   var googleIm=createElement('img').prop({src:uGoogle, alt:"google"}).on('click', function(){popupWin('google','');}).css({position:'relative',top:'0.4em',width:strButtonSize,heigth:strButtonSize,'margin-left':'1em'}); 
 
   var openIDIm=createElement('img').prop({src:uOID22, alt:"openID"}).css({position:'relative',top:'0.4em',width:strButtonSize,heigth:strButtonSize,'margin-left':'1em',background:'white'}); 
   openIDIm.on('click', function(){p2.toggle();});
-  var p1=createElement('p').myAppend(fbIm).css({'text-align':'center'}); // ,googleIm,openIDIm
+  var divFB=createElement('div').myAppend(fbIm).css({'text-align':'center'}); // ,googleIm,openIDIm
 
-  var cancel=createElement('button').on('click', historyBack).myText(langHtml.Cancel);//.css({'margin-top':'1.5em'});
-  //if(boSharp) p2='';
-  [p1,cancel].forEach(ele=>ele.css({'margin-top':'1.5em'})); // p2  , 'margin-right':'1.5em'
+  var cancel=createElement('button').on('click', historyBack).myText(langHtml.Cancel);
+  var divBottom=createElement('div').myAppend(cancel).css({display:'flex', gap:'0.4em', 'justify-content':'space-between', width:'100%'})
   
   var pendingMess=createElement('span').hide().myAppend(langHtml.loginPop.pendingMess,' ',imgBusy.cloneNode());
   var cancelMess=createElement('span').hide().myAppend(langHtml.loginPop.cancelMess);
   
-  //el.append(pHead,p1,cancel,pendingMess,cancelMess);  //,p2
+  //el.append(divHead,divFB,cancel,pendingMess,cancelMess);  //,p2
   //el.css({'text-align':'left'});
   
   var blanket=createElement('div').addClass("blanket");
-  var centerDiv=createElement('div').myAppend(pHead,p1,cancel,pendingMess,cancelMess);
-  centerDiv.addClass("Center").css({padding: '1em 0.8em 1em 0.8em'}); //'width':'21em', height:'12em', 
-  el.addClass("Center-Container").myAppend(centerDiv,blanket); //
-
+  var centerDiv=createElement('div').myAppend(divHead,divFB,divBottom,pendingMess,cancelMess);
+  centerDiv.addClass("Center-Flex").css({display:'flex','flex-direction':'column', gap:'0.8em', 'align-items':'center'})
+  el.addClass("Center-Container-Flex").myAppend(centerDiv,blanket); //
   return el;
 
 }
 
 var divEntryBarExtend=function(el){
-  el.toString=function(){return 'divEntryBar';}
+  //el.toString=function(){return 'divEntryBar';}
   //var cssBut={width:'initial','font-weight':'bold', padding:'0.2em', height:"auto", 'min-height':'1.8rem'};
   var butLogin=createElement('button').css({flex:'0 0 auto'}).myText('Login').on('click', function(){loginReturn2=loginReturnList; loginPop.openFunc();});
   el.css({ display:"flex", "justify-content":"center", 'align-items':'center'}); //, 'border-top':'solid 1px', "justify-content":"space-evenly"
@@ -260,14 +259,14 @@ var divEntryBarExtend=function(el){
 
 
 var divLoginInfoExtend=function(el){
-  el.toString=function(){return 'divLoginInfo';}
+  //el.toString=function(){return 'divLoginInfo';}
   el.setStat=function(){
     var boShow=0,arrKind=[];
     var boShow=isSetObject(userInfoFrIP);
     if(boShow){ spanName.myText(userInfoFrIP.nameIP); }
     el.toggle(boShow);
   }
-  var spanName=createElement('span'), spanKind=createElement('span').css({'margin-left':'.4em', 'margin-right':'0.4em'});
+  var spanName=createElement('span');  //, spanKind=createElement('span').css({'margin-left':'.4em', 'margin-right':'0.4em'});
   var logoutButt=createElement('button').myText(langHtml.divLoginInfo.logoutButt).css({'margin-left':'auto'});//.css({'float':'right','font-size':'90%'});
   logoutButt.on('click', function(){ 
     userInfoFrIP={}; 
@@ -275,7 +274,7 @@ var divLoginInfoExtend=function(el){
     return false;
   });
   
-  el.myAppend(spanName,spanKind,logoutButt).css({display:'flex', 'justify-content':'space-between', 'align-items':'center', 'font-size':'12px'});
+  el.myAppend(spanName,logoutButt).css({display:'flex', 'justify-content':'space-between', 'align-items':'center', 'font-size':'12px'});
   el.hide();
   //el.css({visibility:'hidden'});
   return el;
@@ -300,17 +299,18 @@ var linkCreatedPopExtend=function(el){
   }
   var butClose=createElement('button').myText("Close").on('click', historyBack);
   //var aMeetingLink=createElement('a').css({display:'block', 'word-break':'break-all', 'font-size':'85%', margin:'0.4em 0 0.9em'});
-  var textLink=createElement('textarea').css({display:'block', 'word-break':'break-all', 'font-size':'85%', margin:'0.4em 0 0.9em', width:"100%", height:"4em", resize:"none"}).attr({readonly:'readonly'});
-  var divA=createElement('div').myAppend("Send this link to all meeting participants:");
+  var textLink=createElement('textarea').css({display:'block', 'word-break':'break-all', 'font-size':'85%', width:"100%", height:"4em", resize:"none"}).attr({readonly:'readonly'});
+  var head=createElement('div').myAppend("Send this link to all meeting participants:");
 
 
-  var butCopy=createElement('button').myText('Copy to clipboard').css({'font-size':'85%', display:'block', 'margin-bottom':'1.3em'}).on('click',function(){    textLink.select(); textLink.setSelectionRange(0, 99999); document.execCommand("copy");  });
+  var butCopy=createElement('button').myText('Copy to clipboard').css({'font-size':'85%'}).on('click',function(){    textLink.select(); textLink.setSelectionRange(0, 99999); document.execCommand("copy");  });
+  var divBottom=createElement('div').myAppend(butClose, butCopy).css({display:'flex', gap:'0.4em', 'justify-content':'space-between', width:'100%'})
 
   
   var blanket=createElement('div').addClass("blanket");
-  var centerDiv=createElement('div').myAppend(divA, textLink, butCopy, butClose); //aMeetingLink
-  centerDiv.addClass("Center").css({padding: '1em 0.8em 1em 0.8em'}); 
-  el.addClass("Center-Container").myAppend(centerDiv,blanket); //
+  var centerDiv=createElement('div').myAppend(head, textLink, divBottom); 
+  centerDiv.addClass("Center-Flex").css({display:'flex','flex-direction':'column', gap:'0.8em', 'align-items':'center'}); 
+  el.addClass("Center-Container-Flex").myAppend(centerDiv,blanket);
   return el;
 }
 
@@ -382,7 +382,7 @@ var hourFilterExtend=function(el){
       if(sch.hFilter[i]==1) b.css(el.colOn); else b.css(el.colOff);
     }
   }
-  el.colOn={background:'#4f4'};el.colOff={background:'#eee'};
+  el.colOn={background:'var(--bg-green)'};el.colOff={background:''};
   var clickCB=function(){
     var i=this.myVal;
     sch.hFilter[i]=1-sch.hFilter[i]; 
@@ -418,7 +418,7 @@ var dayFilterExtend=function(el){
     var vTimeN=sch.calcVTime(sch.start,'','',0,0);
     sch.convertMTab('',vTimeN);   sch.vTime=vTimeN;   sch.M2Table();
   } 
-  el.colOn={background:'#4f4'};el.colOff={background:'#eee'};
+  el.colOn={background:'var(--bg-green)'};el.colOff={background:''};
   var divLabel=createElement('div').myText('Mark the week days to be included: ').css({'font-weight':'bold'});
   el.append(divLabel);
   var arrButt=Array(7);
@@ -483,9 +483,7 @@ var settingPopExtend=function(el){
     unitSelector.setUpButtStat(); 
   }
   
-  //✖
-  var butClose=createElement('button').myText('≪').css({margin:'0em', position:'absolute', right:'0%', 'font-size':'inherit', transform:'translateX(50%)', bottom:'0.5em'}).on('click', historyBack); //, 'border-radius':'50%', border:'solid 1px grey'
-  //var divClose=createElement('div').myAppend(butClose).css({ display:'flex', 'flex-direction':'row-reverse'});
+
 
   var unitSelector=unitSelectorExtend(createElement('div'));   
   var dayFilter=dayFilterExtend(createElement('div'));  
@@ -504,15 +502,23 @@ var settingPopExtend=function(el){
   //titleInp.css({'margin-top':'0em'});
   //divClose.css({'margin':'0em'});
   //el.append(...tmp);
+  var buttonBack=createElement('button').myText(charBack).css({'margin-left':'0.8em'}).on('click', historyBack);
   var divCont=createElement('div').addClass('contDiv').myAppend(...tmp);
-  var divFoot=createElement('div').myAppend(butClose).addClass('footDiv').css({'justify-content':'center', 'align-items':'flex-end', height:'0px', padding:'0em', 'border-top':'0px', 'font-size':'1.5em'}); //,overflow:'hidden'
+  divCont.css({'text-align':'left', margin:'0 auto 3em', width:'fit-content'})
+  var divBottom=createElement('div').myAppend(buttonBack).addClass('footDiv');
+  //divBottom.css({'justify-content':'center', 'align-items':'flex-end', height:'0px', padding:'0em', 'border-top':'0px', 'font-size':'1.5em'}); //,overflow:'hidden'
   
 
-  el.divContW=createElement('div').myAppend(divCont, divFoot).css({display:'flex', 'flex-direction':'column'});
-  el.divBlanket=divBlanket.cloneNode().on('click', historyBack).hide();
+  // el.divContW=createElement('div').myAppend(divCont, divBottom).css({display:'flex', 'flex-direction':'column'});
+  // el.divBlanket=divBlanket.cloneNode().on('click', historyBack).hide();
+  // el.append(el.divContW, el.divBlanket);
   
-  //var divContW=createElement('div').css({display:'flex', 'flex-direction':'column'}).myAppend(divCont, divFoot);
-  el.append(el.divContW, el.divBlanket);
+
+  divBottom.css({'text-align':'left', left:'50%', transform:'translateX(-50%)', 'min-height':'3em'})
+
+  el.append(divCont, divBottom);
+  el.css({'text-align':'center', display:'inline-block'});
+
   return el;
 }
 
@@ -532,12 +538,13 @@ var deleteScheduleConfirmPopExtend=function(el){
   });
   var uuidRow;
   var cancel=createElement('button').myText("Cancel").on('click', historyBack);
-  var divA=createElement('div').myText("Do you really want to delete this schedule?").css({'margin-bottom':'0.5em'});
+  var head=createElement('div').myText("Do you really want to delete this schedule?").css({});
+  var divBottom=createElement('div').myAppend(cancel, el.yes).css({display:'flex', gap:'0.4em', 'justify-content':'space-between', width:'100%'})
   
   var blanket=createElement('div').addClass("blanket");
-  var centerDiv=createElement('div').myAppend(divA,el.yes,cancel);
-  centerDiv.addClass("Center").css({padding: '1em 0.8em 1em 0.8em'}); 
-  el.addClass("Center-Container").myAppend(centerDiv,blanket); //
+  var centerDiv=createElement('div').myAppend(head,divBottom);
+  centerDiv.addClass("Center-Flex").css({display:'flex','flex-direction':'column', gap:'0.8em', 'align-items':'center'}); 
+  el.addClass("Center-Container-Flex").myAppend(centerDiv, blanket);
   return el;
 }
 
@@ -594,25 +601,32 @@ var linkListPopExtend=function(el){
     loginInfoToggleStuff();
     //var Td=tbody.querySelectorAll('td:nth-child(1)'); Td.forEach(ele=>ele.css({'padding':'0 0.4em'}));
   
-    spanLinkList.myText(tab.length);
+    viewFront.spanLinkList.myText(tab.length);
   }
   var tab=[]; el.tab=tab;
   var arrRow=[createElement('th'), createElement('th').myText('Title'), createElement('th').myText('Link to send to the meeting participants.').attr({colspan:3}), createElement('th').myText('Cre­at­ed'), createElement('th').myText('Last act­ivity')];
   arrRow.forEach(ele=>ele.css({'word-break':'keep-all'}));
   var elRow=createElement('tr').myAppend(...arrRow), thead=createElement('thead').myAppend(elRow);
-  var caption=createElement('caption').myText('Saved meetings').attr("contenteditable", "true");
+  var caption=createElement('caption').myText('Saved meetings'); //.attr("contenteditable", "true");
   var tbody=createElement('tbody');
   var table=createElement('table').myAppend(caption, thead, tbody).css({'font-size':'100%'});
   //el.append(table);
   
-  var butClose=createElement('button').myText('≪').css({margin:'0em', position:'relative', right:'-50%', 'font-size':'inherit', bottom:'0.5em'}).on('click', historyBack);
+  var buttonBack=createElement('button').myText(charBack).css({'margin-left':'0.8em'}).on('click', historyBack);
   var divCont=createElement('div').addClass('contDiv').myAppend(table);
-  var divFoot=createElement('div').myAppend(butClose).addClass('footDiv').css({'justify-content':'center', 'align-items':'flex-end', height:'0px', padding:'0em', 'border-top':'0px', 'font-size':'1.5em'}); //,overflow:'hidden'
+  divCont.css({margin:'0 auto 3em', width:'fit-content'})
+  var divBottom=createElement('div').myAppend(buttonBack).addClass('footDiv');
+  //divBottom.css({'justify-content':'center', 'align-items':'flex-end', height:'0px', padding:'0em', 'border-top':'0px', 'font-size':'1.5em'});
   
-  el.divContW=createElement('div').myAppend(divCont, divFoot).css({display:'flex', 'flex-direction':'column'});
-  el.divBlanket=divBlanket.cloneNode().on('click', historyBack).hide();
-  
-  el.append(el.divContW, el.divBlanket);
+  //el.divContW=createElement('div').myAppend(divCont, divBottom).css({display:'flex', 'flex-direction':'column'});
+  //el.divBlanket=divBlanket.cloneNode().on('click', historyBack).hide();
+  //el.append(el.divContW, el.divBlanket);
+
+  divBottom.css({'text-align':'left', left:'50%', transform:'translateX(-50%)', 'min-height':'3em'})
+
+  el.append(divCont, divBottom);
+  el.css({'text-align':'center', display:'inline-block'});
+
   return el;
 }
 
@@ -681,7 +695,7 @@ var scheduleExtend=function(el){
         
         var del=createElement('div').myAppend('✖').css(cssDeleteButtonMouseOut).css({cursor:'pointer', 'font-size':'1.5em', display:'inline-block','margin':'0 0.3em'}).on('click', removePersonFunc)
                 .on('mouseover', function(){this.css(cssDeleteButtonMouseOver);}).on('mouseout', function(){this.css(cssDeleteButtonMouseOut);});
-        var input=createElement('input').prop({type:'text', placeholder:"Name"}).prop('value',el.vNames[i]).on('keyup', keyUpFunc);
+        var input=createElement('input').prop({type:'text', placeholder:"Name"}).addClass('name').prop('value',el.vNames[i]).on('keyup', keyUpFunc);
         
         var row=createElement('tr').prop({iMy:i}),td=createElement('td').myAppend(del,' ',input).css({'white-space':'nowrap'});
         row.append(td); 
@@ -802,7 +816,7 @@ var scheduleExtend=function(el){
     if(isSetObject(userInfoFrIP) || uuid)     {
       var o={unit:el.unit, intFirstDayOfWeek:el.intFirstDayOfWeek, intDateAlwaysInWOne:el.intDateAlwaysInWOne, start:el.start, lastActivity:lastActivity};
       if(uuid!==null) o.uuid=uuid;
-      o.title=inpTitle.value.trim();
+      o.title=viewFront.inpTitle.value.trim();
       o.MTab=JSON.stringify(sch.MTab);
       o.vNames=JSON.stringify(sch.vNames);
       o.hFilter=JSON.stringify(sch.hFilter);
@@ -840,7 +854,7 @@ var scheduleExtend=function(el){
     if(typeof row!=='undefined') {
       uuid=row.uuid;
       lastActivity=row.lastActivity;
-      inpTitle.value=row.title;
+      viewFront.inpTitle.value=row.title;
       copySome(el, row, ['MTab', 'unit', 'intFirstDayOfWeek', 'intDateAlwaysInWOne', 'start', 'vNames', 'hFilter', 'dFilter']);
     } else row=[]; 
 
@@ -853,11 +867,30 @@ var scheduleExtend=function(el){
     if(uuid) vec[2]=['getSchedule',{uuid},el.getScheduleRet];   majax(vec); 
   }
 
+  
+  var rewriteTabDiff=function(nStChange,nColsChange){
+    var vTimeN=sch.calcVTime('','','',nStChange,nColsChange);  sch.convertMTab('',vTimeN);  sch.vTime=vTimeN;  sch.M2Table();
+  };
+  var tmpCss={position:'absolute', 'font-size':'120%'};
+  var butStEarlier=createElement('button').myText('⇦').css(tmpCss).css({right:'0.5em'}).prop({title:'Start schedule earlier.'}).on('click', function(e){
+    rewriteTabDiff(-1,0);
+  });
+  var butStLater=createElement('button').myText('⇨').css(tmpCss).css({left:'0.5em'}).prop({title:'Start schedule later.'}).on('click', function(e){
+    rewriteTabDiff(1,0);
+  });
+  var butDecCols=createElement('button').myText('-').css(tmpCss).css({right:'0.5em', width:'1.3em'}).prop({title:'Fewer columns.'}).on('click', function(e){
+    rewriteTabDiff(0,-1);
+  });
+  var butIncCols=createElement('button').myText('+').css(tmpCss).css({left:'0.5em', width:'1.3em'}).prop({title:'Add columns.'}).on('click', function(e){
+    rewriteTabDiff(0,1);
+    this.scrollIntoViewIfNeeded();
+  });
+
 
   el.inputTitle=createElement('input').prop({'type':'text', placeholder:"Title"});
   el.butTitle=createElement('button').myAppend('✎');
   //el.caption=createElement('caption').myAppend(el.inputTitle, el.butTitle);
-  var elTable=createElement('table');;
+  var elTable=createElement('table').css({margin:'0 auto'})
   var tbody=createElement('tbody'), thead=createElement('thead');
   elTable.append(thead,tbody);
   el.append(elTable);
@@ -877,6 +910,62 @@ var scheduleExtend=function(el){
   el.vTime=el.calcVTime(el.start,'','',0,0);
   el.M2Table();
 
+  return el;
+}
+
+
+
+var viewFrontExtend=function(el){
+  el.toString=function(){return 'viewFront';}
+  
+  el.divEntryBar=el.querySelector('#divEntryBar');
+  divEntryBarExtend(el.divEntryBar); el.divEntryBar.css({flex:'0 0 auto', padding:'0em', visibility:'hidden'}); //, 
+  //var divLoginInfo=divLoginInfoExtend(createElement('div')).css({padding:'0em 0em 0em 0em','font-size':'75%'});
+  el.divLoginInfo=el.querySelector('#divLoginInfo')
+  divLoginInfoExtend(el.divLoginInfo).addClass('mainDivR').css({flex:'0 0 auto', 'min-height':'2rem'}).hide();
+  var divH1=el.querySelector('#divH1');
+  var H1=divH1.querySelector('h1');
+  var imgH=hovHelp.cloneNode(1).css({margin:'0 0 0 0.5em', 'vertical-align':'middle'}),  bub=createElement('div').myHtml(strTitleHelp);     popupHover(imgH,bub);
+  divH1.myAppend(imgH);
+
+  divH1.css({flex:'0 0 auto', 'text-align':'center'});
+
+  el.inpTitle=createElement('input').prop({type:'text', placeholder:"Title"}).css({'font-weight':'bold','font-size':'130%', 'text-align':'center', 'max-width':'100%'});
+  var divTitle=createElement('div').css({'text-align':'center', margin:'0.3em'}).myAppend(el.inpTitle);
+
+  if(boSmall) { H1.css({'font-size':'1rem'}); divTitle.css({'font-size':'80%'}); }
+
+
+
+    // schW
+  el.sch=scheduleExtend(createElement('div')).css({'margin-bottom':'3em', 'text-align':'center'}); //margin:'0 auto'
+  //var schW=createElement('div').myAppend(el.sch).css({ 'margin-bottom':'3em'}); // flex:'1 1 auto', 'overflow-y':'scroll', height:'100%',
+
+
+    // divBottom
+  var butSetting=createElement('button').myText('⚙').prop({title:'Setup calender resolution etc.'}).css({'margin-left':'0.8em'}).on('click',function(){
+    doHistPush({view:settingPop});
+    settingPop.setVis();
+  }); // ☰≡
+  el.spanLinkList=createElement('span');
+  el.butLinkList=createElement('button').myAppend('Links (', el.spanLinkList, ')').prop({title:'Previously stored meetings.'}).css({}).on('click',function(){
+    linkListPop.setVis();
+    doHistPush({view:linkListPop});
+  });
+  var butSave=createElement('button').myText(langHtml.Save).on('click', function(){sch.save();}).css({});
+  var spanRed=createElement('span').css({"background":"#f00",border:'solid 1px', height:'1em', width:'1em', display:'inline-block', 'vertical-align':'bottom'}); //var(--border-color)
+  var spanBusy=createElement('span').css({}).myAppend(spanRed,' = Busy'); 
+
+  var strTmp='https://emagnusandersson.com/syncAMeeting'; 
+  var aLink=createElement('a').attr({href:strTmp}).myText('More info');
+  var divLink=createElement('a').myAppend(aLink).css({'font-size':'100%','font-weight':'bold', flex:'1 1 auto'});
+  var divBottom=createElement('div').myAppend(butSetting, butSave, el.butLinkList, divLink, spanBusy).addClass('footDiv');  
+  //divBottom.css({bottom:'0px', display:'flex', 'flex-direction':'row', width:'100%', padding:'1em', 'text-align':'center', 'border-top':'1px solid', flex:'0 0 auto'});
+  divBottom.css({'text-align':'left', left:'50%', transform:'translateX(-50%)', 'min-height':'3em'})
+
+  //var deleteRowConfirmPop=deleteRowConfirmPopExtend(createElement('div'));
+
+  el.myAppend(divTitle, el.sch, divBottom);
   return el;
 }
 
@@ -987,6 +1076,8 @@ var userInfoFrIP=null;
 
 var CSRFCode='';
 
+var charBack='◄'; // ≪✖
+var charQuestionMark='❓'
 
 var {boTLS}=site;
 var strScheme='http'+(boTLS?'s':''),    strSchemeLong=strScheme+'://',    uSite=strSchemeLong+site.wwwSite,     uCommon=strSchemeLong+wwwCommon,       uBE=uSite+"/"+leafBE;
@@ -1109,20 +1200,22 @@ var divMessageTextWInner=createElement('div').myAppend(divMessageText).css({marg
 var divMessageTextW=createElement('div').myAppend(divMessageTextWInner).css({width:'100%', position:'fixed', bottom:'0px', left:'0px', 'z-index':'10'});
 elBody.append(divMessageTextW);
 
-var busyLarge=createElement('img').prop({src:uBusyLarge, alt:"busy"}).css({position:'fixed',top:'50%',left:'50%','margin-top':'-42px','margin-left':'-42px','z-index':'1000',border:'black solid 1px'}).hide();
+var busyLarge=createElement('img').prop({src:uBusyLarge, alt:"busy"}).css({position:'fixed',top:'50%',left:'50%','margin-top':'-42px','margin-left':'-42px','z-index':'1000',border:' solid 1px'}).hide(); //var(--border-color)
 elBody.append(busyLarge);
 
 //var hovHelp=createElement('img').prop({src:uHelpFile, alt:"help"}).css({'vertical-align':'-0.4em'});
-var hovHelpMy=createElement('span').myText('❓').addClass('btn-round', 'helpButtonGradient').css({'margin-left':'0.6em', 'text-shadow':'0 0 0 black', 'font-size':'1rem'}).css({color:'transparent', 'text-shadow':'0 0 0 #5780a8'});
+var hovHelpMy=createElement('span').myText('❓').addClass('btn-round', 'helpButton').css({color:'transparent', 'text-shadow':'0 0 0 #5780a8'});
 var hovHelp=hovHelpMy;
 
 var arrDayName=['Su','M','Tu','W','Th','F','Sa'];
 var arrMonthName=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 
+const urlParams = new URLSearchParams(window.location.search), myParam = urlParams.get('uuid');
+var strTitleHelp=myParam?'Mark when you are busy and click save':'Mark when you are busy, click save, and email the returned link to the other meeting participants.';
 
-elBody.css({padding:'0 0 0 0'});
-elBody.css({margin:'0 0 0 0'});
+// elBody.css({padding:'0 0 0 0'});
+// elBody.css({margin:'0 0 0 0'});
 
 
 
@@ -1132,95 +1225,18 @@ var cssDeleteButtonMouseOut={color:'grey', 'text-shadow':''};
 
 
 
-elBody.css({visibility:'visible',background:'#fff'});
+elBody.css({visibility:'visible'});  //,background:'#fff'
 elBody.css({display:'flex','flex-direction':'column'});
 
+var viewFront=elBody.querySelector('#viewFront');   viewFrontExtend(viewFront);
+var sch=viewFront.sch;
 
-
-var divEntryBar=elBody.querySelector('#divEntryBar');
-divEntryBarExtend(divEntryBar); divEntryBar.css({flex:'0 0 auto', padding:'0em', visibility:'hidden'}); //, 
-//var divLoginInfo=divLoginInfoExtend(createElement('div')).css({padding:'0em 0em 0em 0em','font-size':'75%'});
-var divLoginInfo=divLoginInfoExtend(createElement('div')).addClass('mainDivR').css({flex:'0 0 auto', 'min-height':'2rem'}).hide();  //, 'line-height':'1.6em'
-divEntryBar.after(divLoginInfo);
-
-var divH1=elBody.querySelector('#divH1');
-var H1=divH1.querySelector('h1');
 elBody.querySelector('noscript').detach();
 
-const urlParams = new URLSearchParams(window.location.search), myParam = urlParams.get('uuid');
-var strTitleHelp; if(myParam) strTitleHelp='Mark when you are busy and click save'; else strTitleHelp='Mark when you are busy, click save, and email the returned link to the other meeting participants.';
-
-var imgH=hovHelp.cloneNode(1).css({margin:'0 0 0 0.5em'}),  bub=createElement('div').myHtml(strTitleHelp);     popupHover(imgH,bub);   //, 'vertical-align':'-0.3em'
-divH1.myAppend(imgH);
-
-divH1.css({flex:'0 0 auto'});
-
-
-var inpTitle=createElement('input').prop({type:'text', placeholder:"Title"}).css({'font-weight':'bold','font-size':'130%', 'text-align':'center', 'max-width':'100%'});
-var divTitle=createElement('div').css({'text-align':'center', margin:'0.3em'}).myAppend(inpTitle); //,'margin-bottom':'0.5em','border-bottom':'1px solid', ,'padding':'0.4em'
 
 
 
-  // 
-  // divFoot
-  //
-  
-var butSetting=createElement('button').myText('⚙').prop({title:'Setup calender resolution etc.'}).css({'margin-right':'1em', flex:'0 0 auto'}).on('click',function(){
-  doHistPush({view:settingPop});
-  settingPop.setVis();
-}); // ☰≡
-var spanLinkList=createElement('span');
-var butLinkList=createElement('button').myAppend('Links (', spanLinkList, ')').prop({title:'Previously stored meetings.'}).css({'margin-right':'1em'}).on('click',function(){
-  linkListPop.setVis();
-  doHistPush({view:linkListPop});
-});
-var butSave=createElement('button').myText('Save').on('click', function(){sch.save();}).css({'margin-right':'0.5em', flex:'0 0 auto'});
-var spanRed=createElement('span').css({"background":"#f00",border:'black solid 1px', height:'1em', width:'1em', display:'inline-block', 'vertical-align':'bottom'});
-var spanBusy=createElement('span').css({'float':"right"}).myAppend(spanRed,' = Busy'); 
 
-var strTmp='https://emagnusandersson.com/syncAMeeting'; 
-var aLink=createElement('a').attr({href:strTmp}).myText('More info');
-var divLink=createElement('a').myAppend(aLink).css({'font-size':'100%','font-weight':'bold', flex:'1 1 auto'});
-var divFoot=createElement('div').myAppend(butSetting, butSave, butLinkList, divLink, spanBusy);  
-divFoot.css({bottom:'0px', display:'flex', 'flex-direction':'row', width:'100%', padding:'1em', 'text-align':'center', 'border-top':'1px solid', background:'white', flex:'0 0 auto'}); 
-
-
-
-var divBlanket=createElement('div').css({position:'fixed', 'background-color':'white', width:'100%', 'z-index':1, opacity:'0.5', height:'100%', top:'0px', left:'0px'});
-
-
-  // 
-  // sch
-  //
-  
-//var deleteRowConfirmPop=deleteRowConfirmPopExtend(createElement('div'));
-
-var rewriteTabDiff=function(nStChange,nColsChange){
-  var vTimeN=sch.calcVTime('','','',nStChange,nColsChange);  sch.convertMTab('',vTimeN);  sch.vTime=vTimeN;  sch.M2Table();
-};
-var tmpCss={position:'absolute', 'font-size':'120%'};
-var butStEarlier=createElement('button').myText('⇦').css(tmpCss).css({right:'0.5em'}).prop({title:'Start schedule earlier.'}).on('click', function(e){
-  rewriteTabDiff(-1,0);
-});
-var butStLater=createElement('button').myText('⇨').css(tmpCss).css({left:'0.5em'}).prop({title:'Start schedule later.'}).on('click', function(e){
-  rewriteTabDiff(1,0);
-});
-var butDecCols=createElement('button').myText('-').css(tmpCss).css({right:'0.5em', width:'1.3em'}).prop({title:'Fewer columns.'}).on('click', function(e){
-  rewriteTabDiff(0,-1);
-});
-var butIncCols=createElement('button').myText('+').css(tmpCss).css({left:'0.5em', width:'1.3em'}).prop({title:'Add columns.'}).on('click', function(e){
-  rewriteTabDiff(0,1);
-  this.scrollIntoViewIfNeeded();
-});
-
-var sch=scheduleExtend(createElement('table')).css({margin:'0 auto'});
-var schW=createElement('div').myAppend(sch).css({flex:'1 1 auto', 'overflow-y':'scroll', height:'100%'}); //, scheduleList
-
-
-  // 
-  // ViewPop
-  //
-  
 var linkCreatedPop=linkCreatedPopExtend(createElement('div'));
 var loginPop=loginPopExtend(createElement('div'));   loginPop.setHead('Need an identity'); var loginReturn2=loginReturnList;
 
@@ -1233,9 +1249,11 @@ var settingPop=settingPopExtend(createElement('div'));
 
 var deleteScheduleConfirmPop=deleteScheduleConfirmPopExtend(createElement('div'));
 var linkListPop=linkListPopExtend(createElement('div'));
-var tmpCss={position:'fixed', 'background-color':'#ccc', border:'1px solid', width:'calc(100% - 1.5em)', 'z-index':2, opacity:'0.92', 'max-height':'100%', top:'0px', 'max-width':'calc('+maxWidth+' - 1.5em)', height:'100%', 'font-size':'0.95em', transform:'translateX(-200%)', transition:'transform 0.1s, visibility 0.1s'};  // , 'overflow-y':'scroll' , 'overflow':'visible'
-if(boIOS) extend(tmpCss, {'-webkit-transform':'translate3d(0,0,0)'}); 
-[settingPop.divContW, linkListPop.divContW].forEach(ele=>ele.css(tmpCss)); 
+
+// var tmpCss={position:'fixed', 'background-color':'var(--bg-color)', border:'1px solid', width:'calc(100% - 1.5em)', 'z-index':2, opacity:'0.92', 'max-height':'100%', top:'0px', 'max-width':'calc('+maxWidth+' - 1.5em)', height:'100%', 'font-size':'0.95em', transform:'translateX(-200%)', transition:'transform 0.1s, visibility 0.1s'};  // , 'overflow-y':'scroll' , 'overflow':'visible'
+// if(boIOS) extend(tmpCss, {'-webkit-transform':'translate3d(0,0,0)'}); 
+// var tmpCss={ 'background':'var(--bg-color)', border:'1px solid', 'z-index':2, opacity:'0.92', 'font-size':'0.95em'};  // , 'overflow-y':'scroll' , 'overflow':'visible'
+//[settingPop.divContW, linkListPop.divContW].forEach(ele=>ele.css(tmpCss));
 
 
 //'width 0.5s, visibility 0.5s'
@@ -1243,59 +1261,62 @@ if(boIOS) extend(tmpCss, {'-webkit-transform':'translate3d(0,0,0)'});
 //width:'0px', visibility:'hidden'  , transition:'transform 0.5s, visibility 0.5s'
 
 
-var MainDiv=[divEntryBar, divLoginInfo, divH1, divTitle, schW, divFoot]; //, saveDiv, scheduleList   , divRangeL, divRangeSt  , divRangeW
+//var MainDiv=[divEntryBar, divLoginInfo, divH1, divTitle, schW, divBottom]; //, saveDiv, scheduleList   , divRangeL, divRangeSt  , divRangeW
 
-//var StrMainDiv=MainDiv.map(obj=>obj.toString());
-//var StrMainDivFlip=array_flip(StrMainDiv);
+//var MainDivFull=[divEntryBar, divLoginInfo, divH1, divTitle, schW, divBottom];// columnSelectorDiv, columnSorterDiv
+var MainDivFull=[viewFront, settingPop, linkListPop];// columnSelectorDiv, columnSorterDiv
+var MainDivPop=[loginPop, linkCreatedPop, deleteScheduleConfirmPop]
+var MainDiv=[].concat(MainDivFull, MainDivPop)
 
-if(boSmall) { divH1.hide(); divTitle.css({'font-size':'80%'}); }
-MainDiv.forEach(ele=>ele.css({'text-align':'left', background:'#fff','max-width':maxWidth,'margin-left':'auto','margin-right':'auto', width:'100%'}));
-[divH1, divTitle, divFoot].forEach(ele=>ele.css({'text-align':'center'}));
-schW.css({'max-width':""})
-
-var ViewPop=[loginPop, linkCreatedPop, deleteScheduleConfirmPop];
-ViewPop.forEach(ele=>ele.hide());
-var ViewSide=[settingPop, linkListPop];
-ViewSide.forEach(ele=>{
-  ele.css({'text-align':'left', background:'#fff','max-width':maxWidth,'margin-left':'auto','margin-right':'auto', width:'100%'});
-  ele.divBlanket.hide(); ele.divContW.css({transform:'translateX(-200%)', visibility:'hidden'})
-});
-
-elBody.append(...MainDiv, ...ViewPop, ...ViewSide);
+var StrMainDiv=MainDiv.map(obj=>obj.toString());
+var StrMainDivFlip=array_flip(StrMainDiv);
 
 
+// MainDiv.forEach(ele=>ele.css({'text-align':'left','max-width':maxWidth,'margin-left':'auto','margin-right':'auto', width:'100%'})); //, background:'#fff'
+// viewFront.css({'max-width':""})
 
-history.StateMy[history.state.ind]={view:schW};
+//var ViewSide=[];
+// ViewSide.forEach(ele=>{
+//   ele.css({'text-align':'left', background:'#fff','max-width':maxWidth,'margin-left':'auto','margin-right':'auto', width:'100%'});
+//   ele.divBlanket.hide(); ele.divContW.css({transform:'translateX(-200%)', visibility:'hidden'})
+// });
 
-schW.setVis=function(){
-  [...ViewPop].forEach(ele=>ele.hide());
-  [settingPop, linkListPop].forEach(ele=>{ele.divBlanket.hide(); ele.divContW.css({transform:'translateX(-200%)', visibility:'hidden'})});
+
+
+history.StateMy[history.state.ind]={view:viewFront};
+
+
+var closeAllView=function(){
+  MainDiv.forEach(ele=>{
+    if(ele.nodeName=='DIALOG') {if(ele.open) ele.close();} else
+    ele.hide();
+  });
+}
+
+viewFront.setVis=function(){
+  closeAllView(); this.show();
+  //[settingPop, linkListPop].forEach(ele=>{ele.divBlanket.hide(); ele.divContW.css({transform:'translateX(-200%)', visibility:'hidden'})});
   //settingPop.css({'-webkit-overflow-scrolling':'auto'});
   //var tmp={height:"100%"}; elBody.css(tmp);  elHtml.css(tmp);
   return true;
 }
 settingPop.setVis=function(){
-  this.show();
-  //this.divContW.css({width:'calc(100% - 1.5em)', visibility:'visible'});
-  this.divContW.css({transform:'translateX(0%)', visibility:'visible'});
-  this.divBlanket.show();
-  //settingPop.css({'-webkit-overflow-scrolling':'touch'});
-  //var tmp={height:""}; elBody.css(tmp);  elHtml.css(tmp);
-  //schW.css('position',''); setTimeout(function(){schW.css('position','fixed');},100);
+  closeAllView(); this.show();
+  //this.divContW.css({transform:'translateX(0%)', visibility:'visible'});
+  //this.divBlanket.show();
   return true;
 }
 linkListPop.setVis=function(){
-  this.show();  deleteScheduleConfirmPop.hide();
-  //this.divContW.css({width:'calc(100% - 1.5em)'});
-  this.divContW.css({transform:'translateX(0%)', visibility:'visible'});
-  this.divBlanket.show();
-  //settingPop.css({'-webkit-overflow-scrolling':'touch'});
-  //var tmp={height:""}; elBody.css(tmp);  elHtml.css(tmp);
-  //schW.css('position',''); setTimeout(function(){schW.css('position','fixed');},100);
+  closeAllView(); this.show();
+  //this.divContW.css({transform:'translateX(0%)', visibility:'visible'});
+  //this.divBlanket.show();
   return true;
 }
 var lastActivity=0;
 //firstAJAXCall();
+elBody.append(...MainDiv);
+viewFront.setVis()
+
 
 var vec=[['specSetup'],['listSchedule',{},linkListPop.listScheduleRet]];
 if(uuid!==null) vec.push(['getSchedule',{uuid}, sch.getScheduleRet]);
