@@ -7,6 +7,114 @@
 app.funLoad=function(){
 
 
+
+
+//
+// Theme functions
+//
+
+  // themeOS ∈ ['dark','light']
+  // themeChoise ∈ ['dark','light','system']
+  // themeCalc ∈ ['dark','light']
+window.analysColorSchemeSettings=function(){
+  var themeOS=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"
+  var themeChoise=localStorage.getItem("themeChoise")??"system";
+  var arrThemeChoise=['dark','light','system'];
+  var ind=arrThemeChoise.indexOf(themeChoise);  if(ind==-1) ind=2;
+  var themeChoise=arrThemeChoise[ind]
+  var themeCalc=themeChoise=="system"?themeOS:themeChoise
+  return {themeOS, themeChoise, themeCalc}
+}
+
+var setThemeClass=function(theme){
+  if(theme=='dark') elHtml.setAttribute('data-theme', 'dark'); else elHtml.removeAttribute('data-theme');
+  var strT=theme; if(theme!='dark' && theme!='light') strT='light dark'
+  elHtml.css({'color-scheme':strT});
+}
+
+  // Initial setup of selectorOfTheme
+// var selectorOfTheme=createSelectorOfTheme()
+// elBody.myAppend(selectorOfTheme)
+
+// var {themeOS, themeChoise, themeCalc}=analysColorSchemeSettings();
+// console.log(`OS: ${themeOS}, choise: ${themeChoise}, calc: ${themeCalc}`)
+// setThemeClass(themeCalc)
+// selectorOfTheme.value=themeChoise
+
+  // Listen to prefered-color changes on the OS
+window.colorSchemeQueryListener = window.matchMedia('(prefers-color-scheme: dark)');
+colorSchemeQueryListener.addEventListener('change', function(e) {
+  var {themeOS, themeChoise, themeCalc}=analysColorSchemeSettings();
+  console.log(`OS: ${themeOS}, choise: ${themeChoise}, calc: ${themeCalc}`)
+  setThemeClass(themeCalc)
+});
+
+
+
+window.divThemeSelectorCreate=function(){
+  var el=createElement('div')
+  var butSystem=createElement('button').myText('Same as OS').prop({value:'system'})
+  var butLight=createElement('button').myText('Light').prop({value:'light'})
+  var butDark=createElement('button').myText('Dark').prop({value:'dark'})
+  var But=[butSystem, butLight, butDark]
+  var StrBut=['system', 'light', 'dark']
+  var objBut={};  But.forEach((ele,i)=>objBut[StrBut[i]]=ele);
+  el.setButStyling=function(strTheme){
+    //var but=(typeof arg=='string')?objBut(arg):arg
+    var but=objBut[strTheme]
+    But.forEach(elem=>elem.removeClass('boxShadowOn').addClass('boxShadowOff'))
+    but.removeClass('boxShadowOff').addClass('boxShadowOn')
+  }
+  But.forEach(ele=>ele.on('click',function(e){
+    localStorage.setItem('themeChoise', this.value);
+    var {themeOS, themeChoise, themeCalc}=analysColorSchemeSettings();
+    console.log(`OS: ${themeOS}, choise: ${themeChoise}, calc: ${themeCalc}`)
+    setThemeClass(themeCalc)
+    el.setButStyling(themeChoise)
+  }))
+  el.myAppend(...But).css({display:'flex', gap:'.4em', 'justify-content':'space-evenly', 'flex-wrap':'wrap'})
+  return el
+}
+var themePopExtend=function(el){
+  el.strName='themePop'
+  el.id=el.strName
+  el.toString=function(){return el.strName;}
+  el.setVis=function(){
+    if(boDialog) el.showModal(); else el.show();
+    return true;
+  }
+  el.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    historyBack()
+  })
+
+  var h1=createElement('h3').myText("Theme (Background colors): ").css({'margin':'0'});
+
+  var divThemeSelector=divThemeSelectorCreate()
+  var {themeOS, themeChoise, themeCalc}=analysColorSchemeSettings();
+  console.log(`OS: ${themeOS}, choise: ${themeChoise}`)
+  setThemeClass(themeCalc)
+  divThemeSelector.setButStyling(themeChoise)
+
+  var buttonBack=createElement('button').on('click', historyBack).myText(charBack).css({'margin-left':'.8em'});
+  var divBottom=createElement('div').myAppend(buttonBack).css({display:'flex', gap:'0.4em', 'justify-content':'space-between'})
+
+  var El=[h1, divThemeSelector, divBottom];
+  var centerDiv=createElement('div').myAppend(...El);
+  if(boDialog){
+    el.myAppend(centerDiv);
+  } else{
+    var blanket=createElement('div').addClass("blanket");
+    centerDiv.addClass("Center-Flex")
+    centerDiv.css({height:'min(8em, 98%)', width:'min(21em,98%)'});
+    el.addClass("Center-Container-Flex").myAppend(centerDiv,blanket);
+  }
+  centerDiv.css({display:'flex', gap:'1em', 'flex-direction':'column', 'justify-content':'space-evenly'})
+
+  return el;
+}
+  
+
 var createColJIndexNamesObj=function(arrName){
   var o={};
   for(var i=0;i<arrName.length;i++){ 
@@ -191,7 +299,9 @@ app.loginReturn=function(userInfoFrIPT,userInfoFrDBT,CSRFCodeT){
 }
 
 var loginPopExtend=function(el){
-  el.toString=function(){return 'loginPop';}
+  el.strName='loginPop'
+  el.id=el.strName
+  el.toString=function(){return el.strName;}
   var popupWin=function(IP,openid) {
     //e.preventDefault();
     pendingMess.show(); cancelMess.hide();
@@ -267,7 +377,7 @@ var divLoginInfoExtend=function(el){
     el.toggle(boShow);
   }
   var spanName=createElement('span');  //, spanKind=createElement('span').css({'margin-left':'.4em', 'margin-right':'0.4em'});
-  var logoutButt=createElement('button').myText(langHtml.divLoginInfo.logoutButt).css({'margin-left':'auto'});//.css({'float':'right','font-size':'90%'});
+  var logoutButt=createElement('button').myText(langHtml.divLoginInfo.logoutButt).css({'margin-left':'auto'});
   logoutButt.on('click', function(){ 
     userInfoFrIP={}; 
     var vec=[['logout']];   majax(vec); 
@@ -290,7 +400,9 @@ var divLoginInfoExtend=function(el){
 //
 
 var linkCreatedPopExtend=function(el){
-  el.toString=function(){return 'linkCreatedPop';}
+  el.strName='linkCreatedPop'
+  el.id=el.strName
+  el.toString=function(){return el.strName;}
   el.setVis=function(){ el.show();  return true;}
   el.setup=function(uuid){
     const strLink=uFE+'?uuid='+uuid;
@@ -322,7 +434,7 @@ var linkCreatedPopExtend=function(el){
 
 var unitSelectorExtend=function(el){
   el.setUpButtStat=function(){
-    var tmp="input[value='"+sch.unit+"']";
+    var tmp=`input[value='${sch.unit}']`;
     el.querySelector(tmp).attr({checked:1});
   }
   var changeCB=function(){
@@ -350,7 +462,7 @@ var lectureFilterExtend=function(el){
     for(var i=0;i<nLec;i++){
       if(sch.hFilter[i]) iSel=i;
     }
-    //var o=el.find('option:eq('+(iSel-1)+')'); 
+    //var o=el.find(`option:eq(${(iSel-1)})`); 
     var o=sel[iSel-1];  // This looks a bit ugly, but I think it works because iSel will never be 0. (sch.hFilter[0] will always be 0)
     o.attr('selected', 1);
   }
@@ -377,7 +489,7 @@ var lectureFilterExtend=function(el){
 var hourFilterExtend=function(el){
   el.setUpButtStat=function(){
     for(var i=0;i<24;i++){
-      //var b=el.children('button:eq('+i+')');
+      //var b=el.children(`button:eq(${i})`);
       var b=arrButt[i];
       if(sch.hFilter[i]==1) b.css(el.colOn); else b.css(el.colOff);
     }
@@ -404,7 +516,7 @@ var hourFilterExtend=function(el){
 var dayFilterExtend=function(el){
   el.setUpButtStat=function(){
     for(var i=0;i<7;i++){
-      //var b=el.children('button:eq('+i+')');
+      //var b=el.children(`button:eq(${i})`);
       var b=arrButt[i];
       if(sch.dFilter[i]==1) b.css(el.colOn); else b.css(el.colOff);
     }
@@ -428,7 +540,7 @@ var dayFilterExtend=function(el){
 
 var divFirstDayOfWeekExtend=function(el){
   el.setUp=function(i){
-    //var o=el.find('option:eq('+i+')'); 
+    //var o=el.find(`option:eq(${i})`); 
     var o=sel[i]; 
     o.attr('selected', 1);
   }
@@ -448,7 +560,7 @@ var divFirstDayOfWeekExtend=function(el){
 
 var divDateAlwaysInWOneExtend=function(el){
   el.setUp=function(i){
-    var o=el.querySelector("[type='radio'][value='"+i+"']"); 
+    var o=el.querySelector(`[type='radio'][value='${i}']`); 
     o.attr('checked', true);
   }
   var changeCB=function(){
@@ -469,7 +581,9 @@ var divDateAlwaysInWOneExtend=function(el){
 }
 
 var settingPopExtend=function(el){
-  el.toString=function(){return 'settingPop';}
+  el.strName='settingPop'
+  el.id=el.strName
+  el.toString=function(){return el.strName;}
   
   el.setFilterUI=function(){
     lectureFilter.hide(); hourFilter.hide(); dayFilter.hide();
@@ -499,8 +613,6 @@ var settingPopExtend=function(el){
   var tmp=[unitSelector, dayFilter, divFirstDayOfWeek, divDateAlwaysInWOne, lectureFilter, hourFilter];  // titleInp , peroidDiv
   tmp.forEach(ele=>ele.css({'margin':'1em 0.4em 1em 0.4em'}));
   unitSelector.css({'margin':'1.5em 0.4em 1em 0.4em'})
-  //titleInp.css({'margin-top':'0em'});
-  //divClose.css({'margin':'0em'});
   //el.append(...tmp);
   var buttonBack=createElement('button').myText(charBack).css({'margin-left':'0.8em'}).on('click', historyBack);
   var divCont=createElement('div').addClass('contDiv').myAppend(...tmp);
@@ -528,7 +640,9 @@ var settingPopExtend=function(el){
 //
 
 var deleteScheduleConfirmPopExtend=function(el){
-  el.toString=function(){return 'deleteScheduleConfirmPop';}
+  el.strName='deleteScheduleConfirmPop'
+  el.id=el.strName
+  el.toString=function(){return el.strName;}
   el.setVis=function(){ el.show();  return true;}
   el.setup=function(uuidRowT){uuidRow=uuidRowT;}
   el.yes=createElement('button').myText('Yes').on('click', function(){
@@ -549,7 +663,9 @@ var deleteScheduleConfirmPopExtend=function(el){
 }
 
 var linkListPopExtend=function(el){
-  el.toString=function(){return 'linkListPop';}
+  el.strName='linkListPop'
+  el.id=el.strName
+  el.toString=function(){return el.strName;}
   var deleteFunc=function(){
     var {myUUID}=this.parentNode.parentNode;
     if(isSetObject(userInfoFrIP)){
@@ -575,7 +691,7 @@ var linkListPopExtend=function(el){
 
 
 
-      var textLink=createElement('textarea').css({display:'block', 'word-break':'break-all', 'font-size':'85%', width:"100%", height:"4em", resize:"none"}).prop({value:tmp}).attr({readonly:'readonly'}); //, margin:'0.4em 0 0.9em'
+      var textLink=createElement('textarea').css({display:'block', 'word-break':'break-all', 'font-size':'85%', width:"100%", height:"4em", resize:"none"}).prop({value:tmp}).attr({readonly:'readonly'});
     
       var butCopy=createElement('button').myText('Copy').css({'font-size':'85%'}).on('click',function(){  
         var textAreaTmp=this.parentElement.parentElement.children[2].firstChild;
@@ -658,7 +774,6 @@ var scheduleExtend=function(el){
 
   el.M2Table=function(){
     tbody.empty().detach();
-    //var fragment = document.createDocumentFragment();
     
     if(el.vTime!=null) {
       const tmpCssW={position:'relative'};
@@ -852,7 +967,7 @@ var scheduleExtend=function(el){
       }
     }
     if(typeof row!=='undefined') {
-      uuid=row.uuid;
+      uuid=row.uuid??uuid;
       lastActivity=row.lastActivity;
       viewFront.inpTitle.value=row.title;
       copySome(el, row, ['MTab', 'unit', 'intFirstDayOfWeek', 'intDateAlwaysInWOne', 'start', 'vNames', 'hFilter', 'dFilter']);
@@ -916,7 +1031,9 @@ var scheduleExtend=function(el){
 
 
 var viewFrontExtend=function(el){
-  el.toString=function(){return 'viewFront';}
+  el.strName='viewFront'
+  el.id=el.strName
+  el.toString=function(){return el.strName;}
   
   el.divEntryBar=el.querySelector('#divEntryBar');
   divEntryBarExtend(el.divEntryBar); el.divEntryBar.css({flex:'0 0 auto', padding:'0em', visibility:'hidden'}); //, 
@@ -938,7 +1055,7 @@ var viewFrontExtend=function(el){
 
 
     // schW
-  el.sch=scheduleExtend(createElement('div')).css({'margin-bottom':'3em', 'text-align':'center'}); //margin:'0 auto'
+  el.sch=scheduleExtend(createElement('div')).css({'margin-bottom':'3em', 'text-align':'center'});
   //var schW=createElement('div').myAppend(el.sch).css({ 'margin-bottom':'3em'}); // flex:'1 1 auto', 'overflow-y':'scroll', height:'100%',
 
 
@@ -953,13 +1070,20 @@ var viewFrontExtend=function(el){
     doHistPush({view:linkListPop});
   });
   var butSave=createElement('button').myText(langHtml.Save).on('click', function(){sch.save();}).css({});
+
+
+  var butTheme=createElement('button').myText(charBlackWhite).on('click',function(){ 
+    doHistPush({view:themePop, strView:'themePop'});
+    themePop.setVis();
+  })
+
   var spanRed=createElement('span').css({"background":"#f00",border:'solid 1px', height:'1em', width:'1em', display:'inline-block', 'vertical-align':'bottom'}); //var(--border-color)
   var spanBusy=createElement('span').css({}).myAppend(spanRed,' = Busy'); 
 
   var strTmp='https://emagnusandersson.com/syncAMeeting'; 
   var aLink=createElement('a').attr({href:strTmp}).myText('More info');
   var divLink=createElement('a').myAppend(aLink).css({'font-size':'100%','font-weight':'bold', flex:'1 1 auto'});
-  var divBottom=createElement('div').myAppend(butSetting, butSave, el.butLinkList, divLink, spanBusy).addClass('footDiv');  
+  var divBottom=createElement('div').myAppend(butSetting, butSave, el.butLinkList, butTheme, divLink, spanBusy).addClass('footDiv');  
   //divBottom.css({bottom:'0px', display:'flex', 'flex-direction':'row', width:'100%', padding:'1em', 'text-align':'center', 'border-top':'1px solid', flex:'0 0 auto'});
   divBottom.css({'text-align':'left', left:'50%', transform:'translateX(-50%)', 'min-height':'3em'})
 
@@ -1078,13 +1202,14 @@ var CSRFCode='';
 
 var charBack='◄'; // ≪✖
 var charQuestionMark='❓'
+var charBlackWhite='◩'
 
 var {boTLS}=site;
 var strScheme='http'+(boTLS?'s':''),    strSchemeLong=strScheme+'://',    uSite=strSchemeLong+site.wwwSite,     uCommon=strSchemeLong+wwwCommon,       uBE=uSite+"/"+leafBE;
 
 var uBE=uSite+"/"+leafBE;
 var uFE=uSite;
-var wseImageFolder='/'+flImageFolder+'/';
+var wseImageFolder=`/${flImageFolder}/`;
 var uImageFolder=uCommon+wseImageFolder;
 
 var uImCloseW=uImageFolder+'triangleRightW.png';
@@ -1137,7 +1262,7 @@ window.on('popstate', function(event) {
 
     var stateMy=history.StateMy[history.state.ind];
     if(typeof stateMy!='object' ) {
-      var tmpStr=window.location.href +" Error: typeof stateMy: "+(typeof stateMy)+', history.state.ind:'+history.state.ind+', history.StateMy.length:'+history.StateMy.length+', Object.keys(history.StateMy):'+Object.keys(history.StateMy);
+      var tmpStr=`${window.location.href} Error: typeof stateMy: ${(typeof stateMy)}, history.state.ind:${history.state.ind}, history.StateMy.length:${history.StateMy.length}, Object.keys(history.StateMy):${Object.keys(history.StateMy)}`;
       if(!boEpiphany) alert(tmpStr); else  console.log(tmpStr);
       debugger;
       return;
@@ -1214,8 +1339,6 @@ var arrMonthName=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','N
 const urlParams = new URLSearchParams(window.location.search), myParam = urlParams.get('uuid');
 var strTitleHelp=myParam?'Mark when you are busy and click save':'Mark when you are busy, click save, and email the returned link to the other meeting participants.';
 
-// elBody.css({padding:'0 0 0 0'});
-// elBody.css({margin:'0 0 0 0'});
 
 
 
@@ -1236,10 +1359,12 @@ elBody.querySelector('noscript').detach();
 
 
 
+var boDialog=false;
 
 var linkCreatedPop=linkCreatedPopExtend(createElement('div'));
 var loginPop=loginPopExtend(createElement('div'));   loginPop.setHead('Need an identity'); var loginReturn2=loginReturnList;
 
+var themePop=themePopExtend(createElement('div'));
 
   // 
   // ViewSide
@@ -1250,7 +1375,7 @@ var settingPop=settingPopExtend(createElement('div'));
 var deleteScheduleConfirmPop=deleteScheduleConfirmPopExtend(createElement('div'));
 var linkListPop=linkListPopExtend(createElement('div'));
 
-// var tmpCss={position:'fixed', 'background-color':'var(--bg-color)', border:'1px solid', width:'calc(100% - 1.5em)', 'z-index':2, opacity:'0.92', 'max-height':'100%', top:'0px', 'max-width':'calc('+maxWidth+' - 1.5em)', height:'100%', 'font-size':'0.95em', transform:'translateX(-200%)', transition:'transform 0.1s, visibility 0.1s'};  // , 'overflow-y':'scroll' , 'overflow':'visible'
+// var tmpCss={position:'fixed', 'background-color':'var(--bg-color)', border:'1px solid', width:'calc(100% - 1.5em)', 'z-index':2, opacity:'0.92', 'max-height':'100%', top:'0px', 'max-width':`calc(${maxWidth} - 1.5em)`, height:'100%', 'font-size':'0.95em', transform:'translateX(-200%)', transition:'transform 0.1s, visibility 0.1s'};  // , 'overflow-y':'scroll' , 'overflow':'visible'
 // if(boIOS) extend(tmpCss, {'-webkit-transform':'translate3d(0,0,0)'}); 
 // var tmpCss={ 'background':'var(--bg-color)', border:'1px solid', 'z-index':2, opacity:'0.92', 'font-size':'0.95em'};  // , 'overflow-y':'scroll' , 'overflow':'visible'
 //[settingPop.divContW, linkListPop.divContW].forEach(ele=>ele.css(tmpCss));
@@ -1265,7 +1390,7 @@ var linkListPop=linkListPopExtend(createElement('div'));
 
 //var MainDivFull=[divEntryBar, divLoginInfo, divH1, divTitle, schW, divBottom];// columnSelectorDiv, columnSorterDiv
 var MainDivFull=[viewFront, settingPop, linkListPop];// columnSelectorDiv, columnSorterDiv
-var MainDivPop=[loginPop, linkCreatedPop, deleteScheduleConfirmPop]
+var MainDivPop=[loginPop, themePop, linkCreatedPop, deleteScheduleConfirmPop]
 var MainDiv=[].concat(MainDivFull, MainDivPop)
 
 var StrMainDiv=MainDiv.map(obj=>obj.toString());

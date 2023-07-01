@@ -113,7 +113,7 @@ else{
 } 
 var strMd5Config=md5(strConfig);
 eval(strConfig);
-var redisVar='str'+ucfirst(strAppName)+'Md5Config';
+var redisVar=`str${ucfirst(strAppName)}Md5Config`;
 var [err,tmp]=await getRedis(redisVar); if(err) {console.error(err); process.exit(-1);}
 var boNewConfig=strMd5Config!==tmp;
 if(boNewConfig) { var [err,tmp]=await setRedis(redisVar,strMd5Config);   if(err) {console.error(err); process.exit(-1);}      }
@@ -139,7 +139,7 @@ if(typeof argv.sql!='undefined'){
   var [err]=await setupSql.doQuery(argv.sql);
   setupSql.myMySql.fin();
   if(err) {  console.error(err);  process.exit(-1);}
-  console.log('Time elapsed: '+(new Date().getTime()-tTmp)/1000+' s'); 
+  console.log(`Time elapsed: ${(new Date().getTime()-tTmp)/1000} s`); 
   process.exit(0);
 }
 
@@ -239,7 +239,7 @@ const handler=async function(req, res){
     
     // If the counter is to high, then respond with 429
   if(intCount>intDDOSMax) {
-    var strMess="Too Many Requests ("+intCount+"), wait "+tDDOSBan+"s\n";
+    var strMess=`Too Many Requests (${intCount}), wait ${tDDOSBan}s\n`;
     if(pathName=='/'+leafBE){ var reqBE=new ReqBE({req, res}); reqBE.mesEO(strMess,429); }
     else res.outCode(429,strMess);
     return;

@@ -30,7 +30,7 @@ ReqBE.prototype.mesEO=function(errIn, statusCode=500){
   var boString=typeof errIn=='string';
   var err=errIn; 
   if(boString) { this.Str.push('E: '+errIn); err=new MyError(errIn); } 
-  else{  var tmp=err.syscal||''; this.Str.push('E: '+tmp+' '+err.code);  }
+  else{  var tmp=err.syscal||''; this.Str.push(`E: ${tmp} ${err.code}`);  }
   console.log(err.stack);
   GRet.strMessageText=this.Str.join(', ');
   GRet.userInfoFrIP=this.req.sessionCache.userInfoFrIP; 
@@ -92,9 +92,9 @@ ReqBE.prototype.getSchedule=async function (inObj){
   var Ou={}, Sql=[];
  
     // Delete all old schedules
-  Sql.push("DELETE FROM "+scheduleTab+" WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();");
+  Sql.push(`DELETE FROM ${scheduleTab} WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();`);
   Sql.push(`SELECT uuid, title, MTab, unit, intFirstDayOfWeek, intDateAlwaysInWOne, UNIX_TIMESTAMP(start) AS start, vNames, hFilter, dFilter, UNIX_TIMESTAMP(lastActivity) AS lastActivity, UNIX_TIMESTAMP(created) AS created
-  FROM `+scheduleTab+` WHERE uuid=?;`);  //BIN_TO_UUID(uuid) AS uuid  // UUID_TO_BIN(?)
+  FROM ${scheduleTab} WHERE uuid=?;`);  //BIN_TO_UUID(uuid) AS uuid  // UUID_TO_BIN(?)
 
   var sql=Sql.join('\n'),   Val=[inObj.uuid];
   if(boMysql) {
@@ -110,7 +110,7 @@ ReqBE.prototype.getSchedule=async function (inObj){
     var {strSch, lastActivity}=result;
     lastActivity=Number(lastActivity)
     var objSch=deserialize(strSch);
-    extend(objSch,{lastActivity})
+    extend(objSch,{lastActivity}) //, uuid:inObj.uuid
     Ou.row=objSch;
   }
 
@@ -125,8 +125,8 @@ ReqBE.prototype.listSchedule=async function (inObj){
   if(!isSetObject(sessionCache.userInfoFrIP)){ return [null,[Ou]]; }
 
   Ou.tab=[];
-  Sql.push("DELETE FROM "+scheduleTab+" WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();");
-  Sql.push("SELECT uuid, title, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(lastActivity) AS lastActivity FROM "+scheduleTab+" s JOIN "+userTab+" u ON s.idUser=u.idUser WHERE u.IP=? AND u.idIP=?;");  // BIN_TO_UUID(uuid) AS uuid
+  Sql.push(`DELETE FROM ${scheduleTab} WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();`);
+  Sql.push(`SELECT uuid, title, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(lastActivity) AS lastActivity FROM ${scheduleTab} s JOIN ${userTab} u ON s.idUser=u.idUser WHERE u.IP=? AND u.idIP=?;`);  // BIN_TO_UUID(uuid) AS uuid
   
   var {IP,idIP}=sessionCache.userInfoFrIP;
   var sql=Sql.join('\n'),   Val=[IP,idIP];  //Val=[idUser]; 
@@ -182,7 +182,7 @@ ReqBE.prototype.saveSchedule=async function (inObj){
   //eval(extractLocSome('inObj',['title','MTab','unit','intFirstDayOfWeek','intDateAlwaysInWOne','vNames','hFilter','dFilter','start']));
   var tmp=copySomeToArr([], inObj, ['title','MTab','unit','intFirstDayOfWeek','intDateAlwaysInWOne','start', 'vNames','hFilter','dFilter']);  array_mergeM(Val,tmp);
 
-  Sql.push("CALL "+siteName+"save(?,?,?,?, ?,?,?,?,?,?,?,?,?);");
+  Sql.push(`CALL ${siteName}save(?,?,?,?, ?,?,?,?,?,?,?,?,?);`);
   var sql=Sql.join('\n'); 
   if(boMysql) {
     var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
@@ -219,7 +219,7 @@ ReqBE.prototype.deleteSchedule=async function (inObj){
   if(isSetObject(sessionCache.userInfoFrIP)){
     var {IP,idIP}=sessionCache.userInfoFrIP, uuid=inObj.uuid;//,  idUser=sessionCache.userInfoFrDB.customer.idUser;
 
-    Sql.push("CALL "+siteName+"delete(?,?,?);");
+    Sql.push(`CALL ${siteName}delete(?,?,?);`);
     var Val=[]; Val.push(IP, idIP, uuid);
     var sql=Sql.join('\n'); 
     if(boMysql) {
