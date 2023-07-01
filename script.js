@@ -84,12 +84,15 @@ for(var leafLuaFile of LeafLuaFile){
 }
 
 
-  // Default config variables (If you want to change them I suggest you create a file config.js and overwrite them there)
+  // Default config variables (If you want to change them you can for example create a file config.js and overwrite them there)
 extend(app, {uriDB:'', boDbg:0, boAllowSql:1, port:5000, levelMaintenance:0, googleSiteVerification:'googleXXX.html',
   wwwCommon:'',
-  intDDOSMax:100, tDDOSBan:5, 
+  intDDOSMax:100, // intDDOSMax: How many requests before DDOSBlocking occurs. 
+  tDDOSBan:5, // tDDOSBan: How long in seconds til the blocking is lifted
+  intDDOSIPMax:200, // intDDOSIPMax: How many requests before DDOSBlocking occurs. 
+  tDDOSIPBan:10, // tDDOSIPBan: How long in seconds til the blocking is lifted
   maxUnactivity:3600*24,
-  boUseSSLViaNodeJS:false,
+  boUseSelfSignedCert:false,
   wsIconDefaultProt:"/Site/Icon/iconRed<size>.png",
   timeOutDeleteStatusInfo:3600,
   RootDomain:{},
@@ -113,10 +116,10 @@ else{
 } 
 var strMd5Config=md5(strConfig);
 eval(strConfig);
-var redisVar='str'+ucfirst(strAppName)+'Md5Config';
-var [err,tmp]=await getRedis(redisVar); if(err) {console.error(err); process.exit(-1);}
+var keyR=`str${ucfirst(strAppName)}Md5Config`;
+var [err,tmp]=await getRedis(keyR); if(err) {console.error(err); process.exit(-1);}
 var boNewConfig=strMd5Config!==tmp;
-if(boNewConfig) { var [err,tmp]=await setRedis(redisVar,strMd5Config);   if(err) {console.error(err); process.exit(-1);}      }
+if(boNewConfig) { var [err,tmp]=await setRedis(keyR,strMd5Config);   if(err) {console.error(err); process.exit(-1);}      }
 
 app.levelMaintenance=process.env.levelMaintenance??0;
 
@@ -139,7 +142,7 @@ if(typeof argv.sql!='undefined'){
   var [err]=await setupSql.doQuery(argv.sql);
   setupSql.myMySql.fin();
   if(err) {  console.error(err);  process.exit(-1);}
-  console.log('Time elapsed: '+(new Date().getTime()-tTmp)/1000+' s'); 
+  console.log(`Time elapsed: ${(new Date().getTime()-tTmp)/1000} s`); 
   process.exit(0);
 }
 
@@ -167,33 +170,57 @@ if(boDbg){
   fs.watch('stylesheets', makeWatchCB('stylesheets', ['style.css']) );
 }
 
-var StrCookiePropProt=["HttpOnly", "Path=/", "Max-Age="+3600*24*30];
-if(!boLocal || boUseSSLViaNodeJS) StrCookiePropProt.push("Secure");
-app.strCookiePropNormal=";"+StrCookiePropProt.concat("SameSite=None").join(';');
-app.strCookiePropLax=";"+StrCookiePropProt.concat("SameSite=Lax").join(';');
-app.strCookiePropStrict=";"+StrCookiePropProt.concat("SameSite=Strict").join(';'); 
+// var StrCookiePropProt=["HttpOnly", "Path=/", "Max-Age="+3600*24*30];
+// if(!boLocal || boUseSelfSignedCert) StrCookiePropProt.push("Secure");
+// app.strCookiePropNormal=";"+StrCookiePropProt.concat("SameSite=None").join(';');
+// app.strCookiePropLax=";"+StrCookiePropProt.concat("SameSite=Lax").join(';');
+// app.strCookiePropStrict=";"+StrCookiePropProt.concat("SameSite=Strict").join(';'); 
+
+
+
+var tLoginTimeout=300;
+
+const objCookiePropProt={"HttpOnly":1, Path:"/", "Max-Age":3600*24*30, "SameSite":"Lax"};
+if(!boLocal || boUseSelfSignedCert) objCookiePropProt["Secure"]=1;
+var oTmp=extend({},objCookiePropProt); 
+oTmp["SameSite"]="None"; app.strCookiePropNormal=";"+arrayifyCookiePropObj(oTmp).join(';');
+oTmp["SameSite"]="Lax"; app.strCookiePropLax=";"+arrayifyCookiePropObj(oTmp).join(';');
+oTmp["SameSite"]="Strict"; app.strCookiePropStrict=";"+arrayifyCookiePropObj(oTmp).join(';');
+
+var oTmp=extend({},objCookiePropProt); 
+oTmp["Max-Age"]=tLoginTimeout; var str1=";"+arrayifyCookiePropObj(oTmp).join(';');
+oTmp["Max-Age"]=0; var str0=";"+arrayifyCookiePropObj(oTmp).join(';');
+app.StrSessionIDLoginProp=[str0,str1];
+
+
 
 var luaDDosCounterFun=`local c=redis.call('INCR',KEYS[1]); redis.call('EXPIRE',KEYS[1], ARGV[1]); return c`
 redis.defineCommand("myDDosCounterFun", { numberOfKeys: 1, lua: luaDDosCounterFun });
 
-
-  // luaDogFeederFun => luaGetNExpire
 var luaGetNExpire=`local c=redis.call('GET',KEYS[1]); redis.call('EXPIRE',KEYS[1], ARGV[1]); return c`;
 //var luaGetNExpire=`local c=redis.call('GET',KEYS[1]); if(c) then redis.call('EXPIRE',KEYS[1], ARGV[1]); end; return c`;
 redis.defineCommand("myGetNExpire", { numberOfKeys: 1, lua: luaGetNExpire });
+
 
 
 const handler=async function(req, res){
   //res.setHeader("X-Frame-Options", "deny");  // Deny for all (note: this header is removed for images (see reqMediaImage) (should also be removed for videos))
   res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");  // Deny for all (note: this header is removed in certain requests)
   res.setHeader("X-Content-Type-Options", "nosniff");  // Don't try to guess the mime-type (I prefer the rendering of the page to fail if the mime-type is wrong)
-  if(!boLocal || boUseSSLViaNodeJS) res.setHeader("Strict-Transport-Security", "max-age="+3600*24*365); // All future requests must be with https (forget this after a year)
+  if(!boLocal || boUseSelfSignedCert) res.setHeader("Strict-Transport-Security", "max-age="+3600*24*365); // All future requests must be with https (forget this after a year)
   res.setHeader("Referrer-Policy", "origin");  //  Don't write the refer unless the request comes from the origin
   
 
+    // Extract qs, objQS
+  var objUrl=url.parse(req.url), qs=objUrl.query||'', objQS=parseQS2(qs);
+
+
+
+    // Extract siteName, wwwSite
   var domainName=req.headers.host; 
-  var objUrl=url.parse(req.url), qs=objUrl.query||'', objQS=parseQS2(qs), pathNameOrg=objUrl.pathname;
+  var pathNameOrg=objUrl.pathname
   var wwwReq=domainName+pathNameOrg;
+
   var {siteName,wwwSite}=Site.getSite(wwwReq);  
   if(!siteName){ res.out404("404 Nothing at that url\n"); return; }
   var pathName=wwwReq.substr(wwwSite.length); if(pathName.length==0) pathName='/';
@@ -202,59 +229,125 @@ const handler=async function(req, res){
   if(boDbg) console.log(req.method+' '+pathName);
 
   if(boHeroku && site.boTLS && req.headers['x-forwarded-proto']!='https') {
-    if(pathName=='/' && qs.length==0) {        res.out301('https://'+req.headers.host); return; }
+    if(pathName=='/' && qs.length==0) { res.out301('https://'+req.headers.host); return; }
     else { res.writeHead(400);  res.end('You must use https'); return; }
   }
 
 
-  var cookies = parseCookies(req);
-  req.cookies=cookies;
 
-  req.boCookieNormalOK=req.boCookieLaxOK=req.boCookieStrictOK=false;
+  var cookies=req.cookies=parseCookies(req);
+
+
+
+  // var boCookieNormalOK=false, boCookieLaxOK=false, boCookieStrictOK=false;
   
-    // Check if a valid sessionID-cookie came in
-  var boSessionCookieInInput='sessionIDNormal' in cookies, sessionID=null, redisVarSessionCache;
-  if(boSessionCookieInInput) {
-    sessionID=cookies.sessionIDNormal;  redisVarSessionCache=sessionID+'_Cache';
-    var [err, tmp]=await existsRedis(redisVarSessionCache); if(err) {console.error(err); process.exit(1);}
-    req.boCookieNormalOK=tmp;
-  } 
+  //   // Check if a valid sessionID-cookie came in
+  // var boSessionCookieInInput='sessionIDNormal' in cookies, sessionID=null, keyR_Cache;
+  // if(boSessionCookieInInput) {
+  //   sessionID=cookies.sessionIDNormal;  keyR_Cache=sessionID+'_Cache';
+  //   var [err, tmp]=await existsRedis(keyR_Cache); if(err) {console.error(err); process.exit(1);}
+  //   boCookieNormalOK=tmp;
+  // } 
   
-  if(req.boCookieNormalOK){
-      // Check if Lax / Strict -cookies are OK
-    req.boCookieLaxOK=('sessionIDLax' in cookies) && cookies.sessionIDLax===sessionID;
-    req.boCookieStrictOK=('sessionIDStrict' in cookies) && cookies.sessionIDStrict===sessionID;
-    var redisVarDDOSCounter=sessionID+'_Counter';
-  }else{
-    sessionID=randomHash();  redisVarSessionCache=sessionID+'_Cache';
-    var ipClient=getIP(req), redisVarDDOSCounter=ipClient+'_Counter';
-  }
+  // if(boCookieNormalOK){
+  //     // Check if Lax / Strict -cookies are OK
+  //   boCookieLaxOK=('sessionIDLax' in cookies) && cookies.sessionIDLax===sessionID;
+  //   boCookieStrictOK=('sessionIDStrict' in cookies) && cookies.sessionIDStrict===sessionID;
+  //   var keyR_DDOS=sessionID+'_DDOS';
+  // }else{
+  //   sessionID=randomHash();  keyR_Cache=sessionID+'_Cache';
+  //   var ipClient=getIP(req), keyR_DDOS=ipClient+'_DDOS';
+  // }
   
-    // Increase DDOS counter 
-  //var [err, intCount]=await cmdRedis('EVAL',[luaDDosCounterFun, 1, redisVarDDOSCounter, tDDOSBan]); if(err) {console.error(err); process.exit(1);}
-  var [err, intCount]=await redis.myDDosCounterFun(redisVarDDOSCounter, tDDOSBan).toNBP(); if(err) {console.error(err); process.exit(1);}
+  //   // Increase DDOS counter 
+  // //var [err, intCount]=await cmdRedis('EVAL',[luaDDosCounterFun, 1, keyR_DDOS, tDDOSBan]); if(err) {console.error(err); process.exit(1);}
+  // var [err, intCount]=await redis.myDDosCounterFun(keyR_DDOS, tDDOSBan).toNBP(); if(err) {console.error(err); process.exit(1);}
   
   
-  res.setHeader("Set-Cookie", ["sessionIDNormal="+sessionID+strCookiePropNormal, "sessionIDLax="+sessionID+strCookiePropLax, "sessionIDStrict="+sessionID+strCookiePropStrict]);
+  // res.setHeader("Set-Cookie", ["sessionIDNormal="+sessionID+strCookiePropNormal, "sessionIDLax="+sessionID+strCookiePropLax, "sessionIDStrict="+sessionID+strCookiePropStrict]);
     
+  //   // If the counter is to high, then respond with 429
+  // if(intCount>intDDOSMax) {
+  //   var strMess=`Too Many Requests (${intCount}), wait ${tDDOSBan}s\n`;
+  //   if(pathName=='/'+leafBE){ var reqBE=new ReqBE({req, res}); reqBE.mesEO(strMess,429); }
+  //   else res.outCode(429,strMess);
+  //   return;
+  // }
+  
+  //   // Refresh / create  keyR_Cache
+  // if(boCookieNormalOK){
+  //   //var [err, value]=await cmdRedis('EVAL',[luaGetNExpire, 1, keyR_Cache, maxUnactivity]); if(err) {console.error(err); process.exit(1);}
+  //   var [err, value]=await redis.myGetNExpire(keyR_Cache, maxUnactivity).toNBP(); if(err) {console.error(err); process.exit(1);}
+  //   req.sessionCache=JSON.parse(value);
+  // } else { 
+  //   var [err]=await setRedis(keyR_Cache,{}, maxUnactivity);   if(err) {console.error(err); process.exit(1);}
+  //   req.sessionCache={};
+  // }
+
+
+
+
+    //
+    // sessionIDDDos cookie
+    //
+
+    // Assign boCookieDDOSCameNExist
+  let boCookieDDOSCameNExist=false;
+  let {sessionIDDDos=null}=cookies, keyR_DDOS;
+  if(sessionIDDDos) {
+    keyR_DDOS=sessionIDDDos+'_DDOS';
+    let [err, tmp]=await existsRedis(keyR_DDOS); boCookieDDOSCameNExist=tmp;
+  }
+    // If !boCookieDDOSCameNExist then create a new sessionIDDDos (and keyR_DDOS).
+  if(!boCookieDDOSCameNExist) { sessionIDDDos=randomHash();  keyR_DDOS=sessionIDDDos+'_DDOS'; }
+    // Update keyR_DDOS counter
+  var [err, intCount]=await redis.myDDosCounterFun(keyR_DDOS, tDDOSBan).toNBP();
+    // Write to response
+  res.replaceCookie("sessionIDDDos="+sessionIDDDos+strCookiePropNormal);
+
+    // Update keyR_DDOSIP counter
+  let ipClient=getIP(req), keyR_DDOSIP=ipClient+'_DDOS';
+  var [err, intCountIP]=await redis.myDDosCounterFun(keyR_DDOSIP, tDDOSIPBan).toNBP();
+  
+    // Determine which DDOS counter to use
+  let [intCountT, intDDOSMaxT, tDDOSBanT]=boCookieDDOSCameNExist?[intCount, intDDOSMax, tDDOSBan]:[intCountIP, intDDOSIPMax, tDDOSIPBan]
+  
     // If the counter is to high, then respond with 429
-  if(intCount>intDDOSMax) {
-    var strMess="Too Many Requests ("+intCount+"), wait "+tDDOSBan+"s\n";
-    if(pathName=='/'+leafBE){ var reqBE=new ReqBE({req, res}); reqBE.mesEO(strMess,429); }
-    else res.outCode(429,strMess);
+  if(intCountT>intDDOSMaxT) {
+    let strMess=`Too Many Requests (${intCountT}), wait ${tDDOSBanT}s\n`;
+    if(pathName=='/'+leafBE){ let reqBE=new ReqBE({req, res}); reqBE.mesEO(strMess, 429); }
+    else res.outCode(429, strMess);
     return;
   }
+
+
+    //
+    // sessionID cookie
+    //
+
+    // Check if a valid sessionID-cookie came in
+  req.boGotSessionCookie=false;
+  var boSessionCookieInInput='sessionID' in cookies, sessionID=null, keyR_Main;
+  if(boSessionCookieInInput) {
+    sessionID=cookies.sessionID;  keyR_Main=sessionID+'_Main';
+    var [err, tmp]=await existsRedis(keyR_Main); req.boGotSessionCookie=tmp;
+  } 
   
-    // Refresh / create  redisVarSessionCache
-  if(req.boCookieNormalOK){
-    //var [err, value]=await cmdRedis('EVAL',[luaGetNExpire, 1, redisVarSessionCache, maxUnactivity]); if(err) {console.error(err); process.exit(1);}
-    var [err, value]=await redis.myGetNExpire(redisVarSessionCache, maxUnactivity).toNBP(); if(err) {console.error(err); process.exit(1);}
-    req.sessionCache=JSON.parse(value);
+  if(!req.boGotSessionCookie){ sessionID=randomHash();  keyR_Main=sessionID+'_Main'; }
+  
+  res.replaceCookie("sessionID="+sessionID+strCookiePropLax);
+  
+      // Refresh / create  keyR_Main
+  if(req.boGotSessionCookie){
+    //var [err, value]=await cmdRedis('EVAL',[luaGetNExpire, 1, keyR_Main, maxUnactivity]); req.sessionCache=JSON.parse(value)
+    var [err, value]=await redis.myGetNExpire(keyR_Main, maxUnactivity).toNBP(); req.sessionCache=JSON.parse(value);
+  
   } else { 
-    var [err]=await setRedis(redisVarSessionCache,{}, maxUnactivity);   if(err) {console.error(err); process.exit(1);}
+    await setRedis(keyR_Main, {}, maxUnactivity); 
     req.sessionCache={};
   }
 
+  
 
     // Set mimetype if the extention is recognized
   var regexpExt=RegExp('\.([a-zA-Z0-9]+)$');
@@ -265,7 +358,7 @@ const handler=async function(req, res){
   var strScheme='http'+(site.boTLS?'s':''),   strSchemeLong=strScheme+'://';
   var uDomain=strSchemeLong+domainName;
   var uSite=strSchemeLong+wwwSite;
-  extend(req, {site, sessionID, qs, objQS, siteName, strSchemeLong, wwwSite, uSite, uDomain, pathName, rootDomain:RootDomain[site.strRootDomain], redisVarSessionCache});
+  extend(req, {site, sessionID, qs, objQS, siteName, strSchemeLong, wwwSite, uSite, uDomain, pathName, rootDomain:RootDomain[site.strRootDomain], keyR_Main});
 
   var objReqRes={req, res};
   if(boMysql) objReqRes.myMySql=new MyMySql(mysqlPool);
@@ -290,8 +383,8 @@ const handler=async function(req, res){
 }
 port=parseInt(port, 10);
 
-if(boUseSSLViaNodeJS){
-  const options = { key: fs.readFileSync('0SSLCert/server.key'), cert: fs.readFileSync('0SSLCert/server.cert') };
+if(boUseSelfSignedCert){
+  const options = { key: fs.readFileSync('0SelfSignedCert/server.key'), cert: fs.readFileSync('0SelfSignedCert/server.cert') };
   https.createServer(options, handler).listen(port);   console.log("Listening to HTTPS requests at port " + port);
 } else{
   http.createServer(handler).listen(port);   console.log("Listening to HTTP requests at port " + port);

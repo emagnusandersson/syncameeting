@@ -28,7 +28,7 @@ leafDeAuthorize:'deAuthorize'
 
 
 //var tmpSubTab='tmpDataTab';
-//var sqlTempSubTabCreate="CREATE TEMPORARY TABLE IF NOT EXISTS "+tmpSubTab+" (name varchar(128) NOT NULL,  boOn TINYINT(1) NOT NULL,  UNIQUE KEY (name));";
+//var sqlTempSubTabCreate=`CREATE TEMPORARY TABLE IF NOT EXISTS ${tmpSubTab} (name varchar(128) NOT NULL,  boOn TINYINT(1) NOT NULL,  UNIQUE KEY (name));`;
 
 app.listCol={
 KeyCol:['uuid','title'    ,'created','lastActivity'],

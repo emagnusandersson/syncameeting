@@ -7,11 +7,11 @@ app.runIdIP=async function(IP, idIP){ //check  idIP against the user-table and r
 
 
   var Sql=[];
-  Sql.push("SELECT * FROM "+userTab+" WHERE IP=? AND idIP=?;");
+  Sql.push(`SELECT * FROM ${userTab} WHERE IP=? AND idIP=?;`);
   var sql=Sql.join('\n'), Val=[IP, idIP];
   if(boMysql) {
     var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
-    var c=results.length;   userInfoFrDBUpd.customer=c==1?results[0]:0;   if(c>1){ console.log("count>1 ("+c+")"); }
+    var c=results.length;   userInfoFrDBUpd.customer=c==1?results[0]:0;   if(c>1){ console.log(`count>1 (${c})`); }
   } else{
     userInfoFrDBUpd.customer={IP,idIP}
   }
@@ -20,11 +20,11 @@ app.runIdIP=async function(IP, idIP){ //check  idIP against the user-table and r
 }
 
 app.checkIfUserInfoFrIP=async function(){ 
-  var {req}=this, {redisVarSessionCache, sessionCache}=req
-  if('userInfoFrIP' in sessionCache && 'IP' in sessionCache.userInfoFrIP){ return [null,true]; }
+  var {req}=this, {keyR_Main}=req
+  if('userInfoFrIP' in req.sessionCache && 'IP' in req.sessionCache.userInfoFrIP){ return [null,true]; }
   else{ 
-    extend(sessionCache, {userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}});
-    var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity);  if(err) return [err];
+    req.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
+    var [err]=await setRedis(keyR_Main, req.sessionCache, maxUnactivity);  if(err) return [err];
     return [null,false];
   }
 }
@@ -62,7 +62,7 @@ var createSiteSpecificClientJS=function(siteName) {
   //copySome(objOut,site,['wwwSite']);
   objOut.site=siteSimplified;
 
-  Str.push(`var tmp=`+JSON.stringify(objOut)+`;\n Object.assign(window, tmp);`);
+  Str.push(`var tmp=${JSON.stringify(objOut)};\n Object.assign(window, tmp);`);
 
   Str.push("}");
 

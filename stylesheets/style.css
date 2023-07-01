@@ -1,100 +1,136 @@
 
 
 /*Emp=emphasis*/
-@media (prefers-color-scheme:light) {
-  :root {
-      color-scheme:normal;
-      --bg-colorRoot:white;
-      --bg-color:#eee;
-      --bg-colorEmp:#ddd;
-      --bg-colorImg:lightblue;
-      --bg-green:lightgreen;
-      --bg-red:#ff7f7f;
-      --bg-blue:lightblue;
-      --bg-yellow:yellow;
-      --bg-orange:orange;
-      --text-color:#123;
-      --border-color:#123;
-      --link-external:#36b;
-      --link-external-visited:#636;
-      --bg-seller:lightblue;
-      --bg-buyer:pink;
-      --invert:0;
-  }
-  .boxShadowOn {box-shadow:0 0 0 0.2em lightgreen inset; background-color:#eee; color:limegreen}
-  .boxShadowOff {box-shadow:0 0 0 0.2em darkgrey inset; background-color:#ddd}
+/* @media (prefers-color-scheme:light) */ 
+:root {
+  --bg-colorRoot:white;
+  --bg-color:#eee;
+  --bg-colorEmp:#ccc;
+  --bg-colorEmp2:#a0a0a0;
+  --bg-colorImg:lightblue;
+  --bg-green:lightgreen;
+  --bg-red:#ff7f7f;
+  --bg-blue:lightblue;
+  --bg-yellow:yellow;
+  --bg-orange:orange;
+  --text-color:#123;
+  --border-color:#123;
+  --link-external:#36b;
+  --link-external-visited:#636;
+  --color-link:#0000ee;
+  --color-link-visited:#551a8b;
+  --bg-seller:lightblue;
+  --bg-buyer:pink;
+  --invert:0;
+  --border-shadow-color:#191919; --border-lit-color:#666;   /* To make ios buttons look like chrome. */
+
+  --bg-button:#efefef;
+  --bg-input:#fff;
+  --text-red:red;
+  --text-green:green;
+  --text-grey:grey
+
 }
-@media (prefers-color-scheme:dark) {
-  :root {
-      color-scheme:dark;
-      --bg-colorRoot:#202020;
-      --bg-color:#303030;
-      --bg-colorEmp:#3f3f3f;
-      --bg-colorImg:#005470;
-      --bg-green:#007300;
-      --bg-red:#c00020;
-      --bg-blue:#005470;
-      --bg-yellow:#707000;
-      --bg-orange:#b17300;
-      --text-color:#dddddd;
-      --border-color:#dddddd;
-      --link-external:#5487df;
-      --link-external-visited:#b477b4;
-      --bg-seller:#1e8aad;
-      --bg-buyer:#d8566b;
-      --invert:1;
-  }
-  a:link{color:#368cff}
-  a:visited{color:#de41ff}
-  .boxShadowOn {box-shadow:0 0 0 0.2em lightgreen inset; background-color:var(--bg-colorEmp); color:limegreen}
-  .boxShadowOff {box-shadow:0 0 0 0.2em #777 inset; background-color:var(--bg-color); color:darkgrey}
-  .invertOnDark {filter:invert(1)}
-  .invertOnDarkBright {filter:invert(1) brightness(1.4)}
-  
+
+/* @media (prefers-color-scheme:dark) */ 
+[data-theme="dark"] {
+  --bg-colorRoot:#222;
+  --bg-color:#333;
+  --bg-colorEmp:#555; /*Emp=emphasis*/
+  --bg-colorEmp2:#606060;
+  --bg-colorImg:#005470;
+  --bg-green:#007300;
+  --bg-red:#c00020;
+  --bg-blue:#005470;
+  --bg-yellow:#707000;
+  --bg-orange:#b17300;
+  --text-color:#dddddd;
+  --border-color:#dddddd;
+  --link-external:#88b1f7;
+  --link-external-visited:#b477b4;
+  --color-link:#368cff;
+  --color-link-visited:#de41ff;
+  --bg-seller:#1e8aad;
+  --bg-buyer:#d8566b;
+  --invert:1;
+  --border-shadow-color:#191919; --border-lit-color:grey;
+
+  --bg-button:#6b6b6b;
+  --bg-input:#3b3b3b;
+  background:var(--bg-colorRoot);
+  color:var(--text-color);
+  --text-red:#ff7f7f;
+  --text-green:green;
+  --text-grey:#a0a0a0
 }
+
+.boxShadowOn {box-shadow:0 0 0 0.2em lightgreen inset; background-color:#eee; color:limegreen}
+.boxShadowOff {box-shadow:0 0 0 0.2em darkgrey inset; background-color:#ddd; color:#000}
+.boxShadowOn [data-theme="dark"] {box-shadow:0 0 0 0.2em lightgreen inset; background-color:var(--bg-colorEmp); color:limegreen}
+.boxShadowOff [data-theme="dark"] {box-shadow:0 0 0 0.2em #777 inset; background-color:var(--bg-color); color:darkgrey}
+
 :root {
   color-scheme:light dark;
-  background:var(--bg-colorRoot)
+  /* background:var(--bg-colorRoot); */
+  /* color:var(--text-color) */
 }
+
+a:link{color:var(--color-link)}
+a:visited{color:var(--color-link-visited)}
+.invertOnDark {filter:invert(var(--invert))}
+.invertOnDarkBright {filter:invert(var(--invert)) brightness(calc(1 + var(--invert) * 0.4))}
+
 
 
 * {box-sizing:border-box}
-html, body { -webkit-overflow-scrolling:touch; }
-body {overscroll-behavior:contain;}
+html, body {-webkit-overflow-scrolling:touch} /* "Invalid property value" in chrome webtools. "Invalid property name" firefox webtools */
+body {overscroll-behavior:contain}
 
   /* Is there really a difference using this. Tested values "100%" and "none" (Used by Chrome, Edge. Not used by Safari, Firefox) */
-/* body { -webkit-text-size-adjust:none; } */
+/* body {-webkit-text-size-adjust:none} */
 
   /* -webkit-appearance:none is required to make disabled buttons have grey text on Safari. */
-html, body {-webkit-appearance:none}
-select, button, input  {color:inherit} /* Removing blue text in buttons ... on Safari */
-:disabled {color:grey}
-input, button, textarea, select { font:inherit; }  /* Preventing zoom, especially on Safari. */
+html, body {-webkit-appearance:none; appearance:none}
+button, select, input, textarea{color:inherit; font:inherit} 
+/* color:inherit: Removes blue text in buttons on Safari 
+   font:inherit:  Preventing zoom, especially?!?! on Safari. */
+:disabled {color:var(--text-grey)}
+button, select, input, textarea {font:inherit}  /* Preventing zoom, especially?!?! on Safari. */
 
 
-button::-moz-focus-inner {padding:0; border:0} /*Making firefox buttons behave like other browsers (doesn't appear to do any difference)*/
-button {appearance:none; border:solid 1px; border-radius:2px; user-select:none; padding:0 3px}
+button, select, button-toggle {
+  background-color:var(--bg-colorEmp); padding:0.0em 0.2em; font-size:inherit; vertical-align:middle; user-select:none;
+  border-bottom-color:var(--border-shadow-color); border-right-color:var(--border-shadow-color);
+  border-top-color:var(--border-lit-color); border-left-color:var(--border-lit-color);
+  border-width:2px; border-radius:0.4em; height:2.5rem;
+}
+input[type=file]::file-selector-button { /* file-selector-button: must be handled separatly (as it is not supported on safari 12)*/
+  background-color:var(--bg-colorEmp); padding:0.0em 0.2em; font-size:inherit; vertical-align:middle; user-select:none;
+  border-bottom-color:var(--border-shadow-color); border-right-color:var(--border-shadow-color);
+  border-top-color:var(--border-lit-color); border-left-color:var(--border-lit-color);
+  border-width:2px; border-radius:0.4em; height:2.5rem;color:inherit
+}
+
+input, input[type='text'], input[type='number'], input[type='password'], textarea {font-size:16px; background-color:var(--bg-input)}
+
+input[type=file]::file-selector-button {border:revert;-webkit-appearance:none;  appearance:none}
+button-toggle {display:inline-flex; align-items:center; justify-content:center}
+/* input, textarea {background:var(--bg-input)} */
+
+
+[title] {text-decoration-line:underline; text-decoration-style:dotted} /*Add underline on any element with a title*/
+
 
 p {
   margin:0.5em 0em 0.5em 0em;
   line-height:1.2em;
 }
 
-
-
-table {border-collapse:collapse;}
+table {border-collapse:collapse}
 td,th {border:1px solid}
 td,th {min-width:1.6em; text-align:center; vertical-align:middle}
 
-input, textarea, keygen, select, button, isindex  {font-family:arial, verdana, helvetica;font-size:inherit}
 
-input[type='text'].name { width:10em; min-width:2em} 
-/* button {
-border-radius:2px;
-border:solid 1px grey;
-margin:2px;
-padding:1px 6px;
-} */
 
 
 .mainDiv {
@@ -123,21 +159,21 @@ padding:1px 6px;
   align-items:center;
 } */
 .footDiv{
-  position: fixed;
-  bottom: 0;
-  width: min(100%, var(--maxWidth));
-  display: flex;
-  justify-content: space-between;
+  position:fixed;
+  bottom:0;
+  width:min(100%, var(--maxWidth));
+  display:flex;
+  justify-content:space-between;
   align-items:center;
   gap:0.8em;
-  background: var(--bg-color);
-  border-top: 1px solid var(--border-color);
-  opacity: 0.9;
+  background:var(--bg-color);
+  border-top:1px solid var(--border-color);
+  opacity:0.9;
 }
 
 
 .message{
-  border: 1px solid;
+  border:1px solid;
   position:absolute;
   bottom:0%;
   right:0%;
@@ -173,7 +209,7 @@ padding:1px 6px;
   z-index:9001;
 }
 
-.Center-Container-Flex { position:fixed; left:0px; top:0px; width:100%; height:100%; display:flex; z-index:9001;}
+.Center-Container-Flex {position:fixed; left:0px; top:0px; width:100%; height:100%; display:flex; z-index:9001}
 .Center-Flex {
   max-width:95%;
   max-height:98%;

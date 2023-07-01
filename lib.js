@@ -21,10 +21,10 @@ app.pad2=function(n) {return (n<10?'0':'')+n;}
 
   // Trim functions that can trim for other characters than whitespace
 app.myTrimStart=function(str,charlist=String.raw`\s`){
-  return str.replace(new RegExp("^[" + charlist + "]+"), "");
+  return str.replace(new RegExp(`^[${charlist}]+`), "");
 };
 app.myTrimEnd=function(str,charlist=String.raw`\s`){
-  return str.replace(new RegExp("[" + charlist + "]+$"), "");
+  return str.replace(new RegExp(`[${charlist}]+$`), "");
 };
 
 //
@@ -106,7 +106,7 @@ app.StrComp=function(A,B){var lA=A.length; if(lA!==B.length) return false; for(v
 //
 
 //extractLoc=function(obj,strObjName){   // Ex: eval(extractLoc(objMy,'objMy'));
-  //var Str=[];  for(var key in obj) Str.push(key+'='+strObjName+'.'+key);
+  //var Str=[];  for(var key in obj) Str.push(`${key}=${strObjName}.${key}`);
   //var str=''; if(Str.length) str='var '+Str.join(', ')+';';  return str;
 //}
 ////extract=function(obj){  for(var key in obj){  window[key]=obj[key];  }  }
@@ -117,7 +117,7 @@ app.StrComp=function(A,B){var lA=A.length; if(lA!==B.length) return false; for(v
 //}
 //extractLocSome=function(strObjName,arrSome){  // Ex: eval(extractLocSome('objMy',['a','b']));
   //if(typeof arrSome=='string') arrSome=[arrSome];
-  //var len=arrSome.length, Str=Array(len);  for(var i=0;i<len;i++) { var key=arrSome[i]; Str[i]=key+'='+strObjName+'.'+key; }
+  //var len=arrSome.length, Str=Array(len);  for(var i=0;i<len;i++) { var key=arrSome[i]; Str[i]=`${key}=${strObjName}.${key}`; }
   //return 'var '+Str.join(', ')+';';
 //}
 
@@ -159,7 +159,7 @@ app.clearObject=function(obj){ var props = Object.getOwnPropertyNames(obj);  for
 // Date
 //
 
-app.swedDate=function(tmp){ if(tmp) {tmp=UTC2JS(tmp);  tmp=tmp.getFullYear()+'-'+pad2(tmp.getMonth()+1)+'-'+pad2(tmp.getDate());}  return tmp;}
+app.swedDate=function(tmp){ if(tmp) {tmp=UTC2JS(tmp);  tmp=`${tmp.getFullYear()}-${pad2(tmp.getMonth()+1)}-${pad2(tmp.getDate())}`;}  return tmp;}
 app.UTC2JS=function(utcTime){ var tmp=new Date(Number(utcTime)*1000);  return tmp;  }
 app.UTC2Readable=function(utcTime){ var tmp=new Date(Number(utcTime)*1000);   tmp=tmp.toLocaleString();   return tmp; }  
 
@@ -230,7 +230,7 @@ app.closest2Val=function(v, val){
 //
 
 app.deserialize=function(serializedJavascript){
-  return eval('(' + serializedJavascript + ')');
+  return eval(`(${serializedJavascript})`);
 }
 
 app.b64UrlDecode=function(b64UrlString, boUint8Array=false){  // boUint8Array==true => output is in Uint8Array
