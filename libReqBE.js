@@ -30,7 +30,7 @@ ReqBE.prototype.mesEO=function(errIn, statusCode=500){
   var boString=typeof errIn=='string';
   var err=errIn; 
   if(boString) { this.Str.push('E: '+errIn); err=new MyError(errIn); } 
-  else{  var tmp=err.syscal||''; this.Str.push('E: '+tmp+' '+err.code);  }
+  else{  var tmp=err.syscal||''; this.Str.push(`E: ${tmp} ${err.code}`);  }
   console.log(err.stack);
   GRet.strMessageText=this.Str.join(', ');
   GRet.userInfoFrIP=this.req.sessionCache.userInfoFrIP; 
@@ -45,31 +45,31 @@ ReqBE.prototype.mesEO=function(errIn, statusCode=500){
 
 //ReqBE.prototype.clearSessionCache=async function (){
   //this.req.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
-  //var redisVar=req.redisVarSessionCache;
-  //var [err]=await setRedis(redisVar, this.req.sessionCache, maxUnactivity); if(err) return [err];
+  //var keyR=req.keyR_Main;
+  //var [err]=await setRedis(keyR, this.req.sessionCache, maxUnactivity); if(err) return [err];
   //this.GRet.userInfoFrDBUpd=extend({},specialistDefault);
 //}
 
 ReqBE.prototype.specSetup=async function (inObj){
-  var {req}=this, Ou={}, {redisVarSessionCache, sessionCache}=req;
+  var {req}=this, Ou={}, {keyR_Main}=req;
   var Role=null; if(typeof inObj=='object' && 'Role' in inObj) Role=inObj.Role;
   //if(!checkIfUserInfoFrIP()) { callback(null,[Ou]); return } 
   var [err,boOK]=await checkIfUserInfoFrIP.call(this);   if(err) return [err];
   if(!boOK) { return [null, [Ou]];} 
-  var {IP, idIP}=sessionCache.userInfoFrIP;
+  var {IP, idIP}=req.sessionCache.userInfoFrIP;
 
   var [err, result]=await runIdIP.call(this, IP, idIP); if(err) return [err];
-  extend(this.GRet.userInfoFrDBUpd, result);    extend(sessionCache.userInfoFrDB, result);
+  extend(this.GRet.userInfoFrDBUpd, result);    extend(req.sessionCache.userInfoFrDB, result);
   
   //setSessionMain.call(this);
   //if(!this.checkIfAnySpecialist()){this.clearSession();} // If the user once clicked login, but never saved anything then logout
   //callback(null,[Ou]);
   
-  var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity); if(err) return [err];
+  var [err]=await setRedis(keyR_Main, req.sessionCache, maxUnactivity); if(err) return [err];
   if(!checkIfAnySpecialist.call(this)){ // If the user once clicked login, but never saved anything then logout
     //await clearSessionCache.call(this);
-    extend(sessionCache, {userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}});
-    var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity); if(err) return [err];
+    req.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
+    var [err]=await setRedis(keyR_Main, req.sessionCache, maxUnactivity); if(err) return [err];
     this.GRet.userInfoFrDBUpd=extend({},specialistDefault);
   } 
   return [null, [Ou]];
@@ -78,13 +78,16 @@ ReqBE.prototype.specSetup=async function (inObj){
 
 
 ReqBE.prototype.logout=async function (inObj){
-  var {req}=this, {redisVarSessionCache, sessionCache}=req;
-  //resetSessionMain.call(this);
-  extend(sessionCache, {userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}});
-  var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity); if(err) return [err];
+  var {req}=this;
+  //, {keyR_Main}=req;
+  //req.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
+  //var [err]=await setRedis(keyR_Main, req.sessionCache, maxUnactivity); if(err) return [err];
+  req.sessionCache={}
+  var [err,tmp]=await delRedis([req.sessionID+'_Main']); if(err) return [err]
   this.GRet.userInfoFrDBUpd=extend({},specialistDefault);
   this.mes('Logged out'); return [null, [0]];
 }
+
 
 ReqBE.prototype.getSchedule=async function (inObj){
   var {req}=this, {site}=req;
@@ -92,9 +95,9 @@ ReqBE.prototype.getSchedule=async function (inObj){
   var Ou={}, Sql=[];
  
     // Delete all old schedules
-  Sql.push("DELETE FROM "+scheduleTab+" WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();");
+  Sql.push(`DELETE FROM ${scheduleTab} WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();`);
   Sql.push(`SELECT uuid, title, MTab, unit, intFirstDayOfWeek, intDateAlwaysInWOne, UNIX_TIMESTAMP(start) AS start, vNames, hFilter, dFilter, UNIX_TIMESTAMP(lastActivity) AS lastActivity, UNIX_TIMESTAMP(created) AS created
-  FROM `+scheduleTab+` WHERE uuid=?;`);  //BIN_TO_UUID(uuid) AS uuid  // UUID_TO_BIN(?)
+  FROM ${scheduleTab} WHERE uuid=?;`);  //BIN_TO_UUID(uuid) AS uuid  // UUID_TO_BIN(?)
 
   var sql=Sql.join('\n'),   Val=[inObj.uuid];
   if(boMysql) {
@@ -110,7 +113,7 @@ ReqBE.prototype.getSchedule=async function (inObj){
     var {strSch, lastActivity}=result;
     lastActivity=Number(lastActivity)
     var objSch=deserialize(strSch);
-    extend(objSch,{lastActivity})
+    extend(objSch,{lastActivity}) //, uuid:inObj.uuid
     Ou.row=objSch;
   }
 
@@ -119,16 +122,16 @@ ReqBE.prototype.getSchedule=async function (inObj){
 }
 
 ReqBE.prototype.listSchedule=async function (inObj){
-  var {req}=this, {site, sessionCache}=req, {userTab, scheduleTab}=site.TableName;
+  var {req}=this, {site}=req, {userTab, scheduleTab}=site.TableName;
   var Ou={}, Sql=[];
   
-  if(!isSetObject(sessionCache.userInfoFrIP)){ return [null,[Ou]]; }
+  if(!isSetObject(req.sessionCache.userInfoFrIP)){ return [null,[Ou]]; }
 
   Ou.tab=[];
-  Sql.push("DELETE FROM "+scheduleTab+" WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();");
-  Sql.push("SELECT uuid, title, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(lastActivity) AS lastActivity FROM "+scheduleTab+" s JOIN "+userTab+" u ON s.idUser=u.idUser WHERE u.IP=? AND u.idIP=?;");  // BIN_TO_UUID(uuid) AS uuid
+  Sql.push(`DELETE FROM ${scheduleTab} WHERE date_add(lastActivity, INTERVAL 1 MONTH)<now();`);
+  Sql.push(`SELECT uuid, title, UNIX_TIMESTAMP(created) AS created, UNIX_TIMESTAMP(lastActivity) AS lastActivity FROM ${scheduleTab} s JOIN ${userTab} u ON s.idUser=u.idUser WHERE u.IP=? AND u.idIP=?;`);  // BIN_TO_UUID(uuid) AS uuid
   
-  var {IP,idIP}=sessionCache.userInfoFrIP;
+  var {IP,idIP}=req.sessionCache.userInfoFrIP;
   var sql=Sql.join('\n'),   Val=[IP,idIP];  //Val=[idUser]; 
   if(boMysql) {
     var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
@@ -162,11 +165,11 @@ ReqBE.prototype.listSchedule=async function (inObj){
 }
 
 ReqBE.prototype.saveSchedule=async function (inObj){
-  var {req}=this, {site, siteName, sessionCache}=req;
+  var {req}=this, {site, siteName}=req;
   var scheduleTab=site.TableName.scheduleTab;
   var Ou={}, Sql=[];
 
-  var IP='fb', idIP='';  if(isSetObject(sessionCache.userInfoFrIP)){ ({IP,idIP}=sessionCache.userInfoFrIP); }
+  var IP='fb', idIP='';  if(isSetObject(req.sessionCache.userInfoFrIP)){ ({IP,idIP}=req.sessionCache.userInfoFrIP); }
   var Val=[IP, idIP];
   
   
@@ -182,7 +185,7 @@ ReqBE.prototype.saveSchedule=async function (inObj){
   //eval(extractLocSome('inObj',['title','MTab','unit','intFirstDayOfWeek','intDateAlwaysInWOne','vNames','hFilter','dFilter','start']));
   var tmp=copySomeToArr([], inObj, ['title','MTab','unit','intFirstDayOfWeek','intDateAlwaysInWOne','start', 'vNames','hFilter','dFilter']);  array_mergeM(Val,tmp);
 
-  Sql.push("CALL "+siteName+"save(?,?,?,?, ?,?,?,?,?,?,?,?,?);");
+  Sql.push(`CALL ${siteName}save(?,?,?,?, ?,?,?,?,?,?,?,?,?);`);
   var sql=Sql.join('\n'); 
   if(boMysql) {
     var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
@@ -213,13 +216,13 @@ ReqBE.prototype.saveSchedule=async function (inObj){
 }
 
 ReqBE.prototype.deleteSchedule=async function (inObj){
-  var {req}=this, {site, siteName, sessionCache}=req, {userTab, scheduleTab}=site.TableName;
+  var {req}=this, {site, siteName}=req, {userTab, scheduleTab}=site.TableName;
   var Ou={}, Sql=[];
 
-  if(isSetObject(sessionCache.userInfoFrIP)){
-    var {IP,idIP}=sessionCache.userInfoFrIP, uuid=inObj.uuid;//,  idUser=sessionCache.userInfoFrDB.customer.idUser;
+  if(isSetObject(req.sessionCache.userInfoFrIP)){
+    var {IP,idIP}=req.sessionCache.userInfoFrIP, uuid=inObj.uuid;//,  idUser=req.sessionCache.userInfoFrDB.customer.idUser;
 
-    Sql.push("CALL "+siteName+"delete(?,?,?);");
+    Sql.push(`CALL ${siteName}delete(?,?,?);`);
     var Val=[]; Val.push(IP, idIP, uuid);
     var sql=Sql.join('\n'); 
     if(boMysql) {
@@ -248,16 +251,35 @@ ReqBE.prototype.deleteSchedule=async function (inObj){
 
 
 ReqBE.prototype.go=async function (){
-  var {req, res}=this, {site, redisVarSessionCache, sessionCache}=req;
+  var {req, res}=this, {site, keyR_Main}=req;
 
-  //var [err, val]=await getRedis(redisVarSessionCache,1);  if(err) {this.mesEO(err);  return; }    this.sessionCache=val;
-  if(!sessionCache || typeof sessionCache!='object') { 
-    //resetSessionMain.call(this);
-    extend(sessionCache, {userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}});
-    var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity); if(err){ this.mesEO(err); return;}
+  var boSecFetch='sec-fetch-site' in req.headers
+  if(boSecFetch){
+    var strT=req.headers['sec-fetch-site'];
+    if(strT!='same-origin') { this.mesEO(Error(`sec-fetch-site header is not 'same-origin' (${strT})`));  return;}
+    
+    var strT=req.headers['sec-fetch-dest'];
+    if(strT!='empty') { this.mesEO(Error(`sec-fetch-dest header is not 'empty' (${strT})`));  return;}
+  
+    var strT=req.headers['sec-fetch-user'];
+    if(strT && strT=='?1') { this.mesEO(Error(`sec-fetch-user header equals '?1'`));  return;}
+    
+    var strT=req.headers['sec-fetch-mode'], boT=strT=='no-cors' || strT=='cors';
+    if(!boT) { this.mesEO(Error(`sec-fetch-mode header is neither 'no-cors' or 'cors' (${strT})`));  return;}
   }
 
-  var [err]=await expireRedis(redisVarSessionCache, maxUnactivity); if(err){ this.mesEO(err); return;}
+  if('x-requested-with' in req.headers){
+    var str=req.headers['x-requested-with'];   if(str!=="XMLHttpRequest") { this.mesEO(Error("x-requested-with: "+str));  return; }
+  } else {  this.mesEO(Error("x-requested-with not set"));  return;  }
+
+  //var [err, val]=await getRedis(keyR_Main,1);  if(err) {this.mesEO(err);  return; }    req.sessionCache=val;
+  if(!req.sessionCache || typeof req.sessionCache!='object') { 
+    //resetSessionMain.call(this);
+    req.sessionCache={userInfoFrDB:extend({},specialistDefault),   userInfoFrIP:{}};
+    var [err]=await setRedis(keyR_Main, req.sessionCache, maxUnactivity); if(err){ this.mesEO(err); return;}
+  }
+
+  var [err]=await expireRedis(keyR_Main, maxUnactivity); if(err){ this.mesEO(err); return;}
   
   
   var jsonInput;
@@ -289,8 +311,13 @@ ReqBE.prototype.go=async function (){
     
   try{ var beArr=JSON.parse(jsonInput); }catch(e){ console.log(e); res.out500('Error in JSON.parse, '+e); return; }
   
-  if(!req.boCookieStrictOK) {this.mesEO(new Error('Strict cookie not set'));  return;   }
+  //if(!req.boCookieStrictOK) {this.mesEO(new Error('Strict cookie not set'));  return;   }
   
+    // Check that sessionIDStrict cookie exists and is valid.
+  if(!('sessionIDStrict' in req.cookies)) {this.mesEO('no sessionIDStrict cookie'); return}
+  var sessionIDStrict=req.cookies.sessionIDStrict;
+  var [err, val]=await redis.myGetNExpire(sessionIDStrict+'_Strict', maxUnactivity).toNBP();
+  if(!val) {this.mesEO('sessionIDStrict cookie not valid'); return}
 
     // Remove the beArr[i][0] values that are not functions
   var CSRFIn, caller='index';
@@ -318,16 +345,16 @@ ReqBE.prototype.go=async function (){
 
 
 
-    // cecking/set CSRF-code
-  var redisVar=req.sessionID+'_CSRFCode'+ucfirst(caller), CSRFCode;
+    // Check/set CSRF-code
+  var keyR=req.sessionID+'_CSRFCode'+ucfirst(caller), CSRFCode;
   if(boCheckCSRF){
-    if(!CSRFIn){ this.mesO('CSRFCode not set (try reload page)'); return;}
-    var [err, CSRFStored]=await getRedis(redisVar); if(err) {this.mesEO(err);  return; }
-    if(CSRFIn!==CSRFStored){ this.mesO('CSRFCode err (try reload page)'); return;}
+    // if(!CSRFIn){ this.mesO('CSRFCode not set (try reload page)'); return;}
+    // var [err, CSRFStored]=await getRedis(keyR); if(err) {this.mesEO(err);  return; }
+    // if(CSRFIn!==CSRFStored){ this.mesO('CSRFCode err (try reload page)'); return;}
   }
   if(boSetNewCSRF){
     var CSRFCode=randomHash();
-    var [err]=await setRedis(redisVar, CSRFCode, maxUnactivity); if(err){ this.mesEO(err); return;}
+    var [err]=await setRedis(keyR, CSRFCode, maxUnactivity); if(err){ this.mesEO(err); return;}
     this.GRet.CSRFCode=CSRFCode;
   }
 

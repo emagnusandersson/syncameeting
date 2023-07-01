@@ -6,7 +6,21 @@
 // Should be saved on every change (perhaps?!?) ... and preferabley updated on any other who is currently visiting the site.
 // onbeforeunload event to inform of unsaved changes
 
+
+//["'] *\+ *([a-zA-Z0-9-\.\(\)\[\]_/\+ ]+) *\+ *['"]      ${$1}
+//[`] *\+ *([a-zA-Z0-9-\.\(\)\[\]_/\+]+) *\+ *[`]        ${$1}
+//` *\+ *([a-zA-Z0-9-\.\[\]_/\+]+)               ${$1}`
+//` *\+ *([a-zA-Z0-9-\.\(\)\[\]_/\+]+)           ${$1}`
+//([a-zA-Z0-9-\.\[\]_/\+]+) *\+ *[`]             `${$1}
+//([a-zA-Z0-9-\.\(\)\[\]_/\+]+) *\+ *[`]         `${$1}
+
+// \$\{([^\+\}]+)\+                 }${
+
 //function\(([\w,]+)\)\s*\{\s*return *
+
+
+// Logging in on android (chrome) doesn't work, same problem as on OAuth2_ImplicitFlow_tester
+//  window.opener is null (allthough it works with idplace and google (OAuth2_ImplicitFlow_tester))
 
 var mesOMake=function(glue){ return function(str){
   if(str) this.Str.push(str);
@@ -14,7 +28,7 @@ var mesOMake=function(glue){ return function(str){
 }}
 var mesEOMake=function(glue){ return function(err){
   var error=new MyError(err); console.log(error.stack);
-  this.Str.push('E: '+err.syscal+' '+err.code);
+  this.Str.push(`E: ${err.syscal} ${err.code}`);
   var str=this.Str.join(glue); this.res.end(str);	
 }}
 var mesOMakeJSON=function(glue){ return function(str){
@@ -23,7 +37,7 @@ var mesOMakeJSON=function(glue){ return function(str){
 }}
 var mesEOMakeJSON=function(glue){ return function(err){
   var error=new MyError(err); console.log(error.stack);
-  var tmp=err.syscal||''; this.Str.push('E: '+tmp+' '+err.code);
+  var tmp=err.syscal||''; this.Str.push(`E: ${tmp} ${err.code}`);
   var str=this.Str.join(glue); this.res.end(serialize(str));	
 }}
 
@@ -36,6 +50,18 @@ app.reqIndex=async function() {
   var {req, res}=this, {flow, siteName, site, uSite, wwwSite, objQS}=req;
   var {uuid=null}=objQS
 
+  var boSecFetch='sec-fetch-site' in req.headers
+  if(boSecFetch){
+    var strT=req.headers['sec-fetch-mode'];
+    if(!(strT=='navigate' || strT=='same-origin')) { res.outCode(400, `sec-fetch-mode header not allowed (${strT})`); return;}
+  }
+
+  
+    // Set sessionIDStrict
+  var sessionIDStrict=randomHash();
+  var [err,tmp]=await setRedis(sessionIDStrict+'_Strict', 1, maxUnactivity);
+  //reqMy.outCookies.sessionIDStrict=sessionIDStrict+strCookiePropStrict
+  res.replaceCookie("sessionIDStrict="+sessionIDStrict+strCookiePropLax);
 
   var requesterCacheTime=getRequesterTime(req.headers);
 
@@ -64,11 +90,11 @@ xmlns:fb="http://www.facebook.com/2008/fbml">`);
 
   var srcIcon16=site.SrcIcon[IntSizeIconFlip[16]];
   var srcIcon114=site.SrcIcon[IntSizeIconFlip[114]];
-  Str.push('<link rel="icon" type="image/png" href="'+srcIcon16+'" />');
-  Str.push('<link rel="apple-touch-icon" href="'+srcIcon114+'"/>');
+  Str.push(`<link rel="icon" type="image/png" href="${srcIcon16}" />`);
+  Str.push(`<link rel="apple-touch-icon" href="${srcIcon114}"/>`);
 
 
-  Str.push("<meta name='viewport' id='viewportMy' content='width=device-width, initial-scale=1, minimum-scale=1'/>");
+  Str.push("<meta name='viewport' id='viewportMy' content='width=device-width, initial-scale=1, minimum-scale=1, interactive-widget=resizes-content'/>");
   //Str.push('<meta name="theme-color" content="#fff"/>');
 
 
@@ -82,22 +108,22 @@ xmlns:fb="http://www.facebook.com/2008/fbml">`);
 
 
   Str.push(`
-  <meta name="description" content="`+strDescription+`"/>
-  <meta name="keywords" content="`+strKeywords+`"/>
-  <link rel="canonical" href="`+uSite+`"/>`);
+  <meta name="description" content="${strDescription}"/>
+  <meta name="keywords" content="${strKeywords}"/>
+  <link rel="canonical" href="${uSite}"/>`);
 
   
   var uIcon200=uSite+site.SrcIcon[IntSizeIconFlip[200]];
   if(!boDbg) {
     Str.push(`
-<meta property="og:title" content="`+wwwSite+`"/>
+<meta property="og:title" content="${wwwSite}"/>
 <meta property="og:type" content="website" />
-<meta property="og:url" content="http://`+wwwSite+`"/>
-<meta property="og:image" content="`+uIcon200+`"/>
-<meta property="og:site_name" content="`+wwwSite+`"/>
+<meta property="og:url" content="http://${wwwSite}"/>
+<meta property="og:image" content="${uIcon200}"/>
+<meta property="og:site_name" content="${wwwSite}"/>
 <meta property="fb:admins" content="100002646477985"/>
-<meta property="fb:app_id" content="`+req.rootDomain.fb.id+`"/>
-<meta property="og:description" content="`+strDescription+`"/>
+<meta property="fb:app_id" content="${req.rootDomain.fb.id}"/>
+<meta property="og:description" content="${strDescription}"/>
 <meta property="og:locale:alternate" content="sv_se" />
 <meta property="og:locale:alternate" content="en_US" />`);
   }
@@ -116,7 +142,7 @@ h1 { font-size:1.6rem; font-weight:bold; letter-spacing:0.15em; text-shadow:-1px
 <script>
   window.fbAsyncInit = function() {
     FB.init({
-      appId      : '`+req.rootDomain.fb.id+`',
+      appId      : '${req.rootDomain.fb.id}',
       cookie     : true,
       xfbml      : true,
       version    : 'v4.0'
@@ -144,12 +170,12 @@ h1 { font-size:1.6rem; font-weight:bold; letter-spacing:0.15em; text-shadow:-1px
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
   })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
-  ga('create', '`+tmpID+`', { 'storage': 'none' });
+  ga('create', '${tmpID}', { 'storage': 'none' });
   ga('send', 'pageview');
 </script>`;
   }
   Str.push(strTracker);
-  //ga('create', '`+tmpID+`', 'auto');
+  //ga('create', '${tmpID}', 'auto');
 
 
   var uCommon=''; if(wwwCommon) uCommon=req.strSchemeLong+wwwCommon;
@@ -160,24 +186,24 @@ h1 { font-size:1.6rem; font-weight:bold; letter-spacing:0.15em; text-shadow:-1px
   var boDbgT=boDbg; if(boIOS) boDbgT=0;
   
   
-  var keyTmp=siteName+'/'+leafManifest, vTmp=boDbgT?0:CacheUri[keyTmp].eTag;     Str.push(`<link rel="manifest" href="`+uSite+`/`+leafManifest+`?v=`+vTmp+`"/>`);
+  var keyTmp=siteName+'/'+leafManifest, vTmp=boDbgT?0:CacheUri[keyTmp].eTag;     Str.push(`<link rel="manifest" href="${uSite}/${leafManifest}?v=${vTmp}"/>`);
   
     // Include stylesheets
-  //var pathTmp='/stylesheets/resetMeyer.css', vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<link rel="stylesheet" href="'+uCommon+pathTmp+'?v='+vTmp+'" type="text/css">');
-  var pathTmp='/stylesheets/style.css', vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<link rel="stylesheet" href="'+uCommon+pathTmp+'?v='+vTmp+'" type="text/css">');
+  //var pathTmp='/stylesheets/resetMeyer.css', vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push(`<link rel="stylesheet" href="${uCommon}${pathTmp}?v=${vTmp}" type="text/css">`);
+  var pathTmp='/stylesheets/style.css', vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push(`<link rel="stylesheet" href="${uCommon}${pathTmp}?v=${vTmp}" type="text/css">`);
 
   Str.push(`<script>
-globalThis.uuid=`+JSON.stringify(uuid)+`;
+globalThis.uuid=${JSON.stringify(uuid)};
 </script>`);
 
     // Include site specific JS-files
   var uSite=req.strSchemeLong+wwwSite;
-  var keyCache=siteName+'/'+leafSiteSpecific, vTmp=boDbgT?0:CacheUri[keyCache].eTag;  Str.push('<script type="module" src="'+uSite+'/'+leafSiteSpecific+'?v='+vTmp+'"></script>');
+  var keyCache=siteName+'/'+leafSiteSpecific, vTmp=boDbgT?0:CacheUri[keyCache].eTag;  Str.push(`<script type="module" src="${uSite}/${leafSiteSpecific}?v=${vTmp}"></script>`);
 
     // Include JS-files
   var StrTmp=['lib.js', 'libClient.js', 'lang/en.js', 'client.js'];
   for(var i=0;i<StrTmp.length;i++){
-    var pathTmp='/'+StrTmp[i], vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push('<script type="module" src="'+uCommon+pathTmp+'?v='+vTmp+'"></script>');
+    var pathTmp='/'+StrTmp[i], vTmp=boDbgT?0:CacheUri[pathTmp].eTag;    Str.push(`<script type="module" src="${uCommon}${pathTmp}?v=${vTmp}"></script>`);
   }
 
 
@@ -185,11 +211,11 @@ globalThis.uuid=`+JSON.stringify(uuid)+`;
 
   Str.push("</head>");
   Str.push(`<body>
-<title>`+strTitle+`</title>
+<title>${strTitle}</title>
 <div id=viewFront>
 <div id=divEntryBar class="mainDivR" style="align-items:center; min-height:2rem; flex:0 0 auto"></div>
 <div id=divLoginInfo class="mainDivR" style="align-items:center; min-height:2rem; flex:0 0 auto"></div>
-<div id=divH1 class="mainDivR" style="border:solid 1px;  padding:0em; margin:0 auto 0; flex:0 0 auto; align-items:center; justify-content:center "><h1>`+strH1+`</h1></div>
+<div id=divH1 class="mainDivR" style="border:solid 1px;  padding:0em; margin:0 auto 0; flex:0 0 auto; align-items:center; justify-content:center "><h1>${strH1}</h1></div>
 </div>
 <noscript><div style="text-align:center">Javascript is disabled, so this app won't work.</div></noscript>
 </body>
@@ -198,6 +224,7 @@ globalThis.uuid=`+JSON.stringify(uuid)+`;
 
   var str=Str.join('\n'); 
   res.setHeader('Content-type', MimeType.html);
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   res.end(str); // res.writeHead(200, "OK", {'Content-Type': MimeType.html}); 
    
 }
@@ -214,10 +241,11 @@ app.reqLogin=async function(){
   var [err]=await setRedis(sessionID+'_Login', objT, 300);   if(err) res.out500(err);
   var {fb}=rootDomain;
   var uLoginBack=uDomain+"/"+leafLoginBack;
-  var uTmp=UrlOAuth.fb+"?client_id="+fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&state="+state; //+"&auth_type=reauthenticate"
+  var uTmp=`${UrlOAuth.fb}?client_id=${fb.id}&redirect_uri=${encodeURIComponent(uLoginBack)}&state=${state}`; //+"&auth_type=reauthenticate"
       //+'&display=popup'  +"&scope=public_profile"   +"&auth_type=reauthorize"
   res.writeHead(302, {'Location': uTmp}); res.end();
 }
+
 
 /******************************************************************************
  * ReqLoginBack
@@ -232,15 +260,15 @@ app.ReqLoginBack=function(objReqRes){
   this.Str=[];
 }
 ReqLoginBack.prototype.go=async function(){
-  var self=this, {req, res}=this, {sessionID, redisVarSessionCache, sessionCache, objQS}=req;
+  var self=this, {req, res}=this, {sessionID, keyR_Main, objQS}=req;
 
   var [err, sessionLogin]=await getRedis(sessionID+'_Login',1); if(err) { res.out500(err); return; } 
   if(!sessionLogin) { res.out500('!sessionLogin');  return; }
 
 
-  if(!sessionCache.userInfoFrDB){
-    sessionCache.userInfoFrDB=extend({},specialistDefault);
-    var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
+  if(!req.sessionCache.userInfoFrDB){
+    req.sessionCache.userInfoFrDB=extend({},specialistDefault);
+    var [err]=await setRedis(keyR_Main, req.sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
   }
   
   if('error' in objQS && objQS.error=='access_denied') { this.writeHtml(objQS.error); return}
@@ -251,7 +279,7 @@ ReqLoginBack.prototype.go=async function(){
   var uLoginBack=req.uSite+"/"+leafLoginBack;
 
   if(req.objQS.state==sessionLogin.state) {
-    var uToGetToken=UrlToken.fb+"?client_id="+req.rootDomain.fb.id+"&redirect_uri="+encodeURIComponent(uLoginBack)+"&client_secret="+req.rootDomain.fb.secret+"&code="+code; // In my mind one shouldn't need to supply redirect_uri here, but facebook requires it. Looks like security by obscurity.
+    var uToGetToken=`${UrlToken.fb}?client_id=${req.rootDomain.fb.id}&redirect_uri=${encodeURIComponent(uLoginBack)}&client_secret=${req.rootDomain.fb.secret}&code=${code}`; // In my mind one shouldn't need to supply redirect_uri here, but facebook requires it. Looks like security by obscurity.
     var [err,response]=await fetch(uToGetToken).toNBP(); if(err){res.out500(err); return;};
     var [err, params]=await response.json().toNBP(); if(err){res.out500(err); return;};
     self.access_token=params.access_token;
@@ -269,30 +297,30 @@ ReqLoginBack.prototype.go=async function(){
   
 
     // interpretGraph 
-  if('error' in objGraph) {console.log('Error accessing data from facebook: '+objGraph.error.type+' '+objGraph.error.message+'<br>'); return; }
+  if('error' in objGraph) {console.log(`Error accessing data from facebook: ${objGraph.error.type} ${objGraph.error.message}<br>`); return; }
   var IP='fb', idIP=objGraph.id, nameIP=objGraph.name;
 
   //if(!objGraph.verified) { var tmp="Your Facebook account is not verified. Try search internet for  \"How to verify Facebook account\".";  res.out500(tmp);   return; }
 
   if(typeof idIP=='undefined') {console.log("Error idIP is empty");}  else if(typeof nameIP=='undefined' ) {nameIP=idIP;}
   
-  if('userInfoFrIP' in sessionCache){
-    var {IP:IPT, idIP:idIPT}=sessionCache.userInfoFrIP
+  if('userInfoFrIP' in req.sessionCache){
+    var {IP:IPT, idIP:idIPT}=req.sessionCache.userInfoFrIP
     if(IPT!==IP || idIPT!==idIP){
-      sessionCache.userInfoFrDB=extend({},specialistDefault);    
+      req.sessionCache.userInfoFrDB=extend({},specialistDefault);    
     }
   }
-  sessionCache.userInfoFrIP={IP,idIP,nameIP};
+  req.sessionCache.userInfoFrIP={IP,idIP,nameIP};
   
-  var [err]=await setRedis(redisVarSessionCache, sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
+  var [err]=await setRedis(keyR_Main, req.sessionCache, maxUnactivity);  if(err) {res.out500(err); return;};
   
   extend(this,{IP,idIP});
 
 
-    // setCSRFCode
+    // Set CSRFCode (first load of reqIndex (when user is not logged in) then CSRFCode=='')
   var CSRFCode=randomHash();
-  var redisVar=sessionID+'_CSRFCode'+ucfirst(sessionLogin.caller);
-  var [err]=await setRedis(redisVar, CSRFCode, maxUnactivity);  if(err) {res.out500(err); return;};
+  var keyR=sessionID+'_CSRFCode'+ucfirst(sessionLogin.caller);
+  var [err]=await setRedis(keyR, CSRFCode, maxUnactivity);  if(err) {res.out500(err); return;};
   this.CSRFCode=CSRFCode;
 
   this.writeHtml(null);
@@ -301,6 +329,7 @@ ReqLoginBack.prototype.go=async function(){
 ReqLoginBack.prototype.writeHtml=function(err){
   var {req, res}=this;
   
+
   var boOK=!Boolean(err);
   if(err){
     console.log('err: '+err); 
@@ -310,17 +339,18 @@ ReqLoginBack.prototype.writeHtml=function(err){
   var Str=this.Str;
   Str.push(`
 <html lang="en"><head><meta name='robots' content='noindex'>
-<link rel='canonical' href='`+uSite+`'/>
+<link rel='canonical' href='${uSite}'/>
 </head>
 <body>
 <script>
-var boOK=`+JSON.stringify(boOK)+`;
+var boOK=${JSON.stringify(boOK)};
 
 if(boOK){
-  var userInfoFrIPTT=`+JSON.stringify(this.req.sessionCache.userInfoFrIP)+`;
-  var userInfoFrDBTT=`+JSON.stringify(this.req.sessionCache.userInfoFrDB)+`;
-  var CSRFCodeTT=`+JSON.stringify(this.CSRFCode)+`;
-  window.opener.loginReturn(userInfoFrIPTT,userInfoFrDBTT,CSRFCodeTT);
+  var userInfoFrIPTT=${JSON.stringify(this.req.sessionCache.userInfoFrIP)};
+  var userInfoFrDBTT=${JSON.stringify(this.req.sessionCache.userInfoFrDB)};
+  var CSRFCodeTT=${JSON.stringify(this.CSRFCode)};
+  //window.opener.loginReturn(userInfoFrIPTT,userInfoFrDBTT,CSRFCodeTT);
+  localStorage.strMyLoginReturn=JSON.stringify({userInfoFrIPTT,userInfoFrDBTT,CSRFCodeTT})
   window.close();
 }
 else {
@@ -347,7 +377,7 @@ function parseSignedRequest(signedRequest, secret) {
   var b64ExpectedMac = myCrypto.createHmac('sha256', secret).update(b64UrlPayload).digest('base64');
   var b64UrlExpectedMac=b64ExpectedMac.replace(/\+/g, '-').replace(/\//g, '_').replace('=', '');
   if (b64UrlMac !== b64UrlExpectedMac) {
-    return [Error('Invalid mac: ' + b64UrlMac + '. Expected ' + b64UrlExpectedMac)];
+    return [Error(`Invalid mac: ${b64UrlMac }. Expected ${b64UrlExpectedMac}`)];
   }
   return [null,data];
 }
@@ -358,7 +388,7 @@ app.deleteUser=async function(idUser){ //
   var Ou={};
 
   var Sql=[], Val=[];
-  Sql.push("DELETE FROM "+userTab+" WHERE idIP=?;"); Val.push(idUser);
+  Sql.push(`DELETE FROM ${userTab} WHERE idIP=?;`); Val.push(idUser);
   var sql=Sql.join('\n');
   if(boMysql) {
     var [err, results]=await this.myMySql.query(sql, Val); if(err) return [err];
@@ -401,14 +431,14 @@ app.reqDataDelete=async function(){  //
   var {nDelU,nDelS}=objT
   var strPlurU=(nDelU==1)?'':'s';
   var strPlurS=(nDelS==1)?'':'s';
-  var mess='User: '+idIP+': '+nDelU+' user'+strPlurU+' deleted, '+nDelS+' schedule'+strPlurS+' deleted';
+  var mess=`User: ${idIP}: ${nDelU} user${strPlurU} deleted, ${nDelS} schedule${strPlurS} deleted`;
   
   console.log('reqDataDelete: '+mess);
   var confirmation_code=genRandomString(32);
   var [err]=await setRedis(confirmation_code+'_DeleteRequest', mess, timeOutDeleteStatusInfo); if(err) {res.out500(err); return;}; //3600*24*30
 
   res.setHeader('Content-Type', MimeType.json); 
-  res.end(JSON.stringify({ url: uSite+'/'+leafDataDeleteStatus+'?confirmation_code='+confirmation_code, confirmation_code }));
+  res.end(JSON.stringify({ url: `${uSite}/${leafDataDeleteStatus}?confirmation_code=${confirmation_code}`, confirmation_code }));
 }
 
 app.reqDataDeleteStatus=async function(){
@@ -420,8 +450,8 @@ app.reqDataDeleteStatus=async function(){
   if(err) {var mess=err.message;}
   else if(mess==null) {
     var [t,u]=getSuitableTimeUnit(timeOutDeleteStatusInfo);
-    //var mess="The delete status info is only available for "+t+u+".\nAll delete requests are handled immediately. So if you pressed delete, you are deleted.";
-    var mess="No info of deletion status found, (any info is deleted "+t+u+" after the deletion request).";
+    //var mess=`The delete status info is only available for ${t}${u}.\nAll delete requests are handled immediately. So if you pressed delete, you are deleted.`;
+    var mess=`No info of deletion status found, (any info is deleted ${t}${u} after the deletion request).`;
   }
   res.end(mess);
 }
@@ -450,10 +480,10 @@ app.reqDeAuthorize=async function(){  //
   var idUser=prefixRedis+IP+'_'+idIP
   var [err, nRemaining]=await redis.scard(idUser).toNBP(); if(err) return [err];
   nRemaining=Number(nRemaining)
-  if(nRemaining) var mess="DeAuthorize-request received. All data is automatically deleted 30 days after last access. If you want to delete them sooner, you can use the dataDelete-request. ("+nRemaining+" schedule(s) currently stored.)";
+  if(nRemaining) var mess=`DeAuthorize-request received. All data is automatically deleted 30 days after last access. If you want to delete them sooner, you can use the dataDelete-request. (${nRemaining} schedule(s) currently stored.)`;
   else var mess="No schedules found for that user_id."
 
-  console.log('reqDeAuthorize (id: '+data.user_id+'), (nSchedules: '+nRemaining+')');
+  console.log(`reqDeAuthorize (id: ${data.user_id}), (nSchedules: ${nRemaining})`);
   
   res.setHeader('Content-Type', MimeType.json); 
   res.end(JSON.stringify({ mess }));
@@ -479,7 +509,7 @@ app.reqStatic=async function() {
     var [err]=await readFileToCache(filename);
     if(err) {
       if(err.code=='ENOENT') {res.out404(); return;}
-      if('host' in req.headers) console.error('Faulty request to '+req.headers.host+" ("+pathName+")");
+      if('host' in req.headers) console.error(`Faulty request to ${req.headers.host} (${pathName})`);
       if('Referer' in req.headers) console.error('Referer:'+req.headers.Referer);
       res.out500(err); return;
     }
@@ -487,7 +517,7 @@ app.reqStatic=async function() {
   var {buf, type, eTag, boZip, boUglify}=CacheUri[keyCache];
   if(eTag===eTagIn){ res.out304(); return; }
   var mimeType=MimeType[type];
-  if(typeof mimeType!='string') console.log('type: '+type+', mimeType: ', mimeType);
+  if(typeof mimeType!='string') console.log(`type: ${type}, mimeType: `, mimeType);
   if(typeof buf!='object' || !('length' in buf)) console.log('typeof buf: '+typeof buf);
   if(typeof eTag!='string') console.log('typeof eTag: '+eTag);
   var objHead={"Content-Type": mimeType, "Content-Length":buf.length, ETag: eTag, "Cache-Control":"public, max-age=31536000"};
@@ -515,7 +545,7 @@ app.SetupSql.prototype.createTable=async function(siteName,boDropOnly){
   var tmp=StrTabName.join(', ');
   SqlTabDrop.push("DROP TABLE IF EXISTS "+tmp);     
   SqlTabDrop.push('DROP TABLE IF EXISTS '+userTab);
-  //var tmp=object_values(ViewName).join(', ');   if(tmp.length) SqlTabDrop.push("DROP VIEW IF EXISTS "+tmp+"");
+  //var tmp=object_values(ViewName).join(', ');   if(tmp.length) SqlTabDrop.push(`DROP VIEW IF EXISTS ${tmp}`);
 
 
 
@@ -529,13 +559,13 @@ app.SetupSql.prototype.createTable=async function(siteName,boDropOnly){
 
 
     // Create users
-  SqlTab.push(`CREATE TABLE `+userTab+` (
+  SqlTab.push(`CREATE TABLE ${userTab} (
   idUser INT(4) NOT NULL auto_increment,
-  IP `+strIPEnum+` CHARSET utf8 NOT NULL,
+  IP ${strIPEnum} CHARSET utf8 NOT NULL,
   idIP VARCHAR(128) CHARSET utf8 NOT NULL DEFAULT '',
   PRIMARY KEY (idUser),
   UNIQUE KEY (IP,idIP)
-  ) AUTO_INCREMENT = `+auto_increment+`, ENGINE=`+engine+` COLLATE `+collate); 
+  ) AUTO_INCREMENT = ${auto_increment}, ENGINE=${engine} COLLATE ${collate}`); 
 
 
 
@@ -544,7 +574,7 @@ app.SetupSql.prototype.createTable=async function(siteName,boDropOnly){
 
 
     // Create schedule
-  SqlTab.push(`CREATE TABLE `+scheduleTab+` (
+  SqlTab.push(`CREATE TABLE ${scheduleTab} (
   uuid VARCHAR(36) PRIMARY KEY,
   idUser INT(4) NOT NULL,
   title VARCHAR(65) CHARSET utf8 NOT NULL DEFAULT '',
@@ -558,8 +588,8 @@ app.SetupSql.prototype.createTable=async function(siteName,boDropOnly){
   dFilter VARCHAR(65) CHARSET utf8 NOT NULL DEFAULT '',
   created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   lastActivity TIMESTAMP DEFAULT 0,
-  FOREIGN KEY (idUser) REFERENCES `+userTab+`(idUser) ON DELETE CASCADE
-  ) AUTO_INCREMENT = `+auto_increment+`, ENGINE=`+engine+` COLLATE `+collate); 
+  FOREIGN KEY (idUser) REFERENCES ${userTab}(idUser) ON DELETE CASCADE
+  ) AUTO_INCREMENT = ${auto_increment}, ENGINE=${engine} COLLATE ${collate}`); 
   //codeSchedule VARCHAR(20) NOT NULL DEFAULT '',
   //uuid VARCHAR(36) NOT NULL,
   //idSchedule INT(8) NOT NULL auto_increment,
@@ -585,8 +615,8 @@ app.SetupSql.prototype.createFunction=async function(siteName,boDropOnly){
   var strIPEnum="ENUM('"+Enum.IP.join("', '")+"')";
 
       
-  SqlFunctionDrop.push("DROP PROCEDURE IF EXISTS "+siteName+"save");
-  SqlFunction.push(`CREATE PROCEDURE `+siteName+`save(IIP `+strIPEnum+`, IidIP VARCHAR(128), IlastActivity INT(4), ICuuid VARCHAR(36), Ititle VARCHAR(128), IMTab TEXT, Iunit ENUM('l', 'h', 'd', 'w'), IintFirstDayOfWeek INT(1), IintDateAlwaysInWOne INT(1), Istart INT(4), IvNames TEXT, IhFilter VARCHAR(65), IdFilter VARCHAR(65))
+  SqlFunctionDrop.push(`DROP PROCEDURE IF EXISTS ${siteName}save`);
+  SqlFunction.push(`CREATE PROCEDURE ${siteName}save(IIP ${strIPEnum}, IidIP VARCHAR(128), IlastActivity INT(4), ICuuid VARCHAR(36), Ititle VARCHAR(128), IMTab TEXT, Iunit ENUM('l', 'h', 'd', 'w'), IintFirstDayOfWeek INT(1), IintDateAlwaysInWOne INT(1), Istart INT(4), IvNames TEXT, IhFilter VARCHAR(65), IdFilter VARCHAR(65))
       proc_label:BEGIN
         DECLARE Vc, VboOld, VidUser INT;
         #DECLARE VBuuid BINARY(16);         # Uncomment when BIN_TO_UUID() becomes available
@@ -596,49 +626,49 @@ app.SetupSql.prototype.createFunction=async function(siteName,boDropOnly){
         IF ISNULL(IvNames) THEN SET IvNames=''; END IF;
         
         IF ISNULL(ICuuid) THEN
-          INSERT INTO `+userTab+` (IP,idIP) VALUES (IIP, IidIP) ON DUPLICATE KEY UPDATE idUser=LAST_INSERT_ID(idUser);
+          INSERT INTO ${userTab} (IP,idIP) VALUES (IIP, IidIP) ON DUPLICATE KEY UPDATE idUser=LAST_INSERT_ID(idUser);
           SET VidUser=LAST_INSERT_ID();
           #SET ICuuid=UUID();               # Uncomment when BIN_TO_UUID() becomes available
           #SET VBuuid=UUID_TO_BIN(ICuuid);  # Uncomment when BIN_TO_UUID() becomes available
           #SET ICuuid=SUBSTR(RAND(), 3);    # Remove when BIN_TO_UUID() becomes available
           SET ICuuid=SUBSTR(CONCAT(MD5(RAND()),MD5(RAND())), 1, 36);     # Remove when BIN_TO_UUID() becomes available
           SET VBuuid=ICuuid;                # Remove when BIN_TO_UUID() becomes available
-          INSERT INTO `+scheduleTab+` (uuid, idUser, lastActivity, MTab, vNames) VALUES (VBuuid, VidUser, now(), '', '');
+          INSERT INTO ${scheduleTab} (uuid, idUser, lastActivity, MTab, vNames) VALUES (VBuuid, VidUser, now(), '', '');
         ELSE
           #SET VBuuid=UUID_TO_BIN(ICuuid);  # Uncomment when BIN_TO_UUID() becomes available
           SET VBuuid=ICuuid;                # Remove when BIN_TO_UUID() becomes available
-          SELECT UNIX_TIMESTAMP(lastActivity)>IlastActivity INTO VboOld FROM `+scheduleTab+` WHERE uuid=VBuuid;
+          SELECT UNIX_TIMESTAMP(lastActivity)>IlastActivity INTO VboOld FROM ${scheduleTab} WHERE uuid=VBuuid;
           SET Vc=ROW_COUNT();
           IF Vc!=1 THEN SELECT CONCAT('Got ', Vc, ' rows') AS mess;  LEAVE proc_label; END IF;
           IF VboOld THEN SELECT 'boOld' AS mess;  LEAVE proc_label; END IF;
         END IF;
 
-        UPDATE `+scheduleTab+` SET title=Ititle, MTab=IMTab, unit=Iunit, intFirstDayOfWeek=IintFirstDayOfWeek, intDateAlwaysInWOne=IintDateAlwaysInWOne, start=FROM_UNIXTIME(Istart), vNames=IvNames, hFilter=IhFilter, dFilter=IdFilter, lastActivity=now() WHERE uuid=VBuuid;
+        UPDATE ${scheduleTab} SET title=Ititle, MTab=IMTab, unit=Iunit, intFirstDayOfWeek=IintFirstDayOfWeek, intDateAlwaysInWOne=IintDateAlwaysInWOne, start=FROM_UNIXTIME(Istart), vNames=IvNames, hFilter=IhFilter, dFilter=IdFilter, lastActivity=now() WHERE uuid=VBuuid;
         SELECT ROW_COUNT() AS nUpd;
-        SELECT UNIX_TIMESTAMP(lastActivity) AS lastActivity, uuid FROM `+scheduleTab+` WHERE uuid=VBuuid;
+        SELECT UNIX_TIMESTAMP(lastActivity) AS lastActivity, uuid FROM ${scheduleTab} WHERE uuid=VBuuid;
       END`);
   // CALL syncameetingLsave('fb', '12345', 1.4e9, null, 'myTitle', 'abcdMTab', 'd', 0, 4, 1.4e9, 'abcnames', 'abchFilt', 'abcdfilt')
   // CALL syncameetingLsave('fb', '12345', 1.5e9, '4885819884842094', 'myNTitle', 'abcdMTab', 'd', 0, 4, 1.4e9, 'abcnames', 'abchFilt', 'abcdfilt')
   // CALL syncameetingLdelete('fb', '12345', '4885819884842094')
 
 
-  SqlFunctionDrop.push("DROP PROCEDURE IF EXISTS "+siteName+"delete");
-  SqlFunction.push(`CREATE PROCEDURE `+siteName+`delete(IIP `+strIPEnum+`, IidIP VARCHAR(128), ICuuid VARCHAR(36))
+  SqlFunctionDrop.push(`DROP PROCEDURE IF EXISTS ${siteName}delete`);
+  SqlFunction.push(`CREATE PROCEDURE ${siteName}delete(IIP ${strIPEnum}, IidIP VARCHAR(128), ICuuid VARCHAR(36))
       proc_label:BEGIN
         DECLARE Vc, VidUser INT;
 
-        SELECT idUser INTO VidUser FROM `+userTab+` WHERE IP=IIP AND idIP=IidIP;
+        SELECT idUser INTO VidUser FROM ${userTab} WHERE IP=IIP AND idIP=IidIP;
         SELECT ROW_COUNT() INTO Vc;
         IF Vc!=1 THEN SELECT CONCAT(Vc, ' rows with that ID') AS err;  LEAVE proc_label; END IF;
 
-        DELETE FROM `+scheduleTab+`  WHERE idUser=VidUser AND uuid=ICuuid;
+        DELETE FROM ${scheduleTab}  WHERE idUser=VidUser AND uuid=ICuuid;
         SELECT ROW_COUNT() INTO Vc;
         #IF Vc!=1 THEN SELECT CONCAT(Vc, ' rows deleted') AS err;  LEAVE proc_label; END IF;
         SELECT Vc AS nDelete;
 
-        SELECT @nRemaining:=COUNT(*) AS nRemaining FROM `+scheduleTab+`  WHERE idUser=VidUser;
+        SELECT @nRemaining:=COUNT(*) AS nRemaining FROM ${scheduleTab}  WHERE idUser=VidUser;
         IF @nRemaining=0 THEN
-          DELETE FROM `+userTab+`  WHERE idUser=VidUser;
+          DELETE FROM ${userTab}  WHERE idUser=VidUser;
         END IF;
       END`);
 
@@ -684,7 +714,7 @@ app.SetupSql.prototype.truncate=async function(siteName){
   Sql.push(tmp);
   for(var i=0;i<StrTabName.length;i++){
     Sql.push("DELETE FROM "+StrTabName[i]);
-    Sql.push("ALTER TABLE "+StrTabName[i]+" AUTO_INCREMENT = 1");
+    Sql.push(`ALTER TABLE ${StrTabName[i]} AUTO_INCREMENT = 1`);
   }
   Sql.push('UNLOCK TABLES');
   Sql.push('SET FOREIGN_KEY_CHECKS=1');
@@ -718,10 +748,10 @@ app.SetupSql.prototype.doQuery=async function(strCreateSql){
 
 var writeMessTextOfMultQuery=function(Sql, err, results){
   var nSql=Sql.length, nResults='(single query)'; if(results instanceof Array) nResults=results.length;
-  console.log('nSql='+nSql+', nResults='+nResults);
+  console.log(`nSql=${nSql}, nResults=${nResults}`);
   var StrMess=[];
   if(err){
-    StrMess.push('err.index: '+err.index+', err: '+err);
+    StrMess.push(`err.index: ${err.index}, err: ${err}`);
     if(nSql==nResults){
       var tmp=Sql.slice(bound(err.index-1,0,nSql), bound(err.index+2,0,nSql)),  sql=tmp.join('\n');
       StrMess.push('Since "Sql" and "results" seem correctly aligned (has the same size), then 3 queries are printed (the preceding, the indexed, and following query (to get a context)):\n'+sql); 
@@ -746,9 +776,9 @@ ReqSql.prototype.toBrowser=function(objSetupSql){
   //var objTmp=Object.getPrototypeOf(objSetupSql);
   if(StrValidMeth.indexOf(strMeth)!=-1){
     var SqlA=objSetupSql[strMeth](SiteNameT, boDropOnly); 
-    var strDelim=';;', sql='-- DELIMITER '+strDelim+'\n'      +SqlA.join(strDelim+'\n')+strDelim      +'\n-- DELIMITER ;\n';
+    var strDelim=';;', sql=`-- DELIMITER ${strDelim}\n${SqlA.join(strDelim+'\n')}${strDelim}\n-- DELIMITER ;\n`;
     res.out200(sql);
-  }else{ var tmp=req.pathNameWOPrefix+' is not valid input, try: '+this.StrType+' (suffixed with "All" if you want to)'; console.log(tmp); res.out404(tmp); }
+  }else{ var tmp=`${req.pathNameWOPrefix} is not valid input, try: ${this.StrType} (suffixed with "All" if you want to)`; console.log(tmp); res.out404(tmp); }
 }  
 
 
@@ -765,7 +795,7 @@ app.createDumpCommand=function(){
     }
     strCommand+='          '+StrTab.join(' ');
   }
-  strCommand="mysqldump mmm --user=root -p --no-create-info --hex-blob"+strCommand+'          >tracker.sql';
+  strCommand=`mysqldump mmm --user=root -p --no-create-info --hex-blob${strCommand}          >tracker.sql`;
 
   return strCommand;
 }
@@ -777,8 +807,8 @@ app.createDumpCommand=function(){
 
 
 // When reinstalling, to keep the table content, run these mysql queries in for example phpmyadmin:
-// CALL "+siteName+"dupMake(); // After this, verify that the duplicate tables have the same number of rows
+// CALL ${siteName}dupMake(); // After this, verify that the duplicate tables have the same number of rows
 // (then do the install (run createTable.php))
-// CALL "+siteName+"dupTrunkOrgNCopyBack();    // After this, verify that the tables have the same number of rows as the duplicates
-// CALL "+siteName+"dupDrop();
+// CALL ${siteName}dupTrunkOrgNCopyBack();    // After this, verify that the tables have the same number of rows as the duplicates
+// CALL ${siteName}dupDrop();
 

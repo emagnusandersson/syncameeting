@@ -22,7 +22,9 @@ app.parseCookies=function(req) {
 app.MyMySql=function(pool){ this.pool=pool; this.connection=null;  }
 MyMySql.prototype.getConnection=async function(){
   var [err, connection]= await new Promise(resolve=>{   this.pool.getConnection((...arg)=>resolve(arg));    });
-  this.connection=connection; return [err];
+  this.connection=connection;
+  //console.log(`MyMySql.getConnection threadId: ${connection.threadId}`)
+  return [err];
 }
 MyMySql.prototype.startTransaction=async function(){
   if(!this.connection) {var [err]=await this.getConnection(); if(err) return [err];}
@@ -39,18 +41,28 @@ MyMySql.prototype.rollback=async function(){  await new Promise(resolve=>{this.c
 MyMySql.prototype.commit=async function(){
   var err=await new Promise(resolve=>{   this.connection.commit(eT=>resolve(eT));   });   return [err];
 }
-MyMySql.prototype.rollbackNRelease=async function(){  await new Promise(resolve=>{this.connection.rollback(()=>resolve())});  this.connection.release(); }
-MyMySql.prototype.commitNRelease=async function(){
-  var err=await new Promise(resolve=>{this.connection.commit(eT=>resolve(eT));  });  this.connection.release();  return [err];
+MyMySql.prototype.rollbackNRelease=async function(){
+  await new Promise(resolve=>{this.connection.rollback(()=>resolve())});
+  this.connection.release();
+  this.connection=null;
 }
-// MyMySql.prototype.isConnectionFree=function(){   return this.pool._freeConnections.indexOf(this.connection)!=-1;  }
-// MyMySql.prototype.fin=function(){
-//   if(this.connection) { 
-//     if(this.isConnectionFree()) this.connection.release();
-//     this.connection=null;
-//   };
-// }
-MyMySql.prototype.fin=function(){   if(this.connection) { this.connection.destroy();this.connection=null;};  }
+MyMySql.prototype.commitNRelease=async function(){
+  var err=await new Promise(resolve=>{this.connection.commit(eT=>resolve(eT));  });
+  this.connection.release();
+  this.connection=null;
+  return [err];
+}
+MyMySql.prototype.isConnectionFree=function(){   return this.pool._freeConnections.indexOf(this.connection)!=-1;  }
+MyMySql.prototype.fin=function(){
+  if(this.connection) { 
+    //if(this.isConnectionFree()) this.connection.release();
+    this.connection.release();
+    //this.connection.destroy();
+    this.connection=null;
+  };
+}
+//MyMySql.prototype.fin=function(){   if(this.connection) { this.connection.destroy();this.connection=null;};  }
+
 
 //
 // Errors
@@ -79,12 +91,39 @@ tmp.out301Loc=function(url){  this.writeHead(301, {Location: '/'+url});  this.en
 tmp.out403=function(){ this.outCode(403, "403 Forbidden\n");  }
 tmp.out304=function(){  this.outCode(304);   }
 tmp.out404=function(str){ str=str||"404 Not Found\n"; this.outCode(404, str);    }
-tmp.out500=function(err){
-  var errN=(err instanceof Error)?err:(new MyError(err)); console.log(errN.stack);
-  this.writeHead(500, {"Content-Type": MimeType.txt});  this.end(err+ "\n");
+tmp.out500=function(e){
+  //var eN=(e instanceof Error)?e:(new MyError(e)); console.log(eN.stack);
+  if(e instanceof Error) {var mess=e.name + ': ' + e.message; console.error(e);} else {var mess=e; console.error(mess);} 
+  this.writeHead(500, {"Content-Type": MimeType.txt});  this.end(mess+ "\n");
 }
 tmp.out501=function(){ this.outCode(501, "Not implemented\n");   }
 
+
+
+tmp.setHeaderMy=function(o){
+  for(var k in o) {this.setHeader(k,o[k]);}
+}
+// tmp.addCookie=function(str){
+//   var arr=this.getHeader("Set-Cookie");
+//   if(!arr) {this.setHeader("Set-Cookie",str); return;}
+//   var boStr=typeof arr==='string'
+//   if(boStr) arr=[arr];
+//   arr.push(str);
+//   if(boStr) this.setHeader("Set-Cookie",arr);
+// }
+tmp.replaceCookie=function(strNew){
+  var arr=this.getHeader("Set-Cookie");
+  if(!arr) {this.setHeader("Set-Cookie",strNew); return;}
+  var boStr=typeof arr==='string'
+  if(boStr) arr=[arr];
+  var l=strNew.indexOf("="), strName=strNew.substr(0,l), boWritten=false;
+  for(var i=0;i<arr.length;i++){
+    var strNameCur=arr[i].substr(0,l);
+    if(strName===strNameCur) {arr[i]=strNew; boWritten=true; break;}
+  }
+  if(!boWritten) arr.push(strNew);
+  if(boStr) this.setHeader("Set-Cookie",arr);
+}
 
 
 
@@ -192,18 +231,6 @@ app.existsRedis=async function(strVar){  return await redis.exists(strVar).toNBP
      
 
 
-    // closebymarket
-  //var StrSuffix=['_Main', '_LoginIdP', '_LoginIdUser', '_UserInfoFrDB', '_Counter'];  var StrCaller=['index'], for(var i=0;i<StrCaller.length;i++){  StrSuffix.push('_CSRFCode'+ucfirst(StrCaller[i])); }
-  //var err=await changeSessionId.call(this, sessionIDNew, StrSuffix);
-app.changeSessionId=async function(sessionIDNew, StrSuffix){
-  for(var i=0;i<StrSuffix.length;i++){
-    var strSuffix=StrSuffix[i];
-    var redisVarO=this.req.sessionID+strSuffix, redisVarN=sessionIDNew+strSuffix; 
-    var [err,value]=await cmdRedis( 'rename', [redisVarO, redisVarN]); //if(err) return err;
-  }
-  this.req.sessionID=sessionIDNew;
-  return null;
-}
 
 
 app.getIP=function(req){
@@ -310,3 +337,15 @@ app.setAccessControlAllowOrigin=function(req, res, RegAllowed){
 //RegAllowedOriginOfStaticFile=[RegExp("^https\:\/\/(control\.closeby\.market|controlclosebymarket\.herokuapp\.com|emagnusandersson\.github\.io)")];
 //if(boDbg) RegAllowedOriginOfStaticFile.push(RegExp("^http\:\/\/(localhost|192\.168\.0)"));
 //setAccessControlAllowOrigin(res, req, RegAllowedOriginOfStaticFile);
+
+
+
+app.arrayifyCookiePropObj=function(obj){  // Ex: {a:1, b:2} => ["a=1", "b=2"]
+  var K=Object.keys(obj);
+  var O=K.map(k=>{
+    var v=obj[k];
+    if((k=="HttpOnly" || k=="Secure") && v) return k;
+    return k+"="+v;
+  });
+  return O;
+}
