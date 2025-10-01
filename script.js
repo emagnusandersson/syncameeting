@@ -212,13 +212,13 @@ const handler=async function(req, res){
   
 
     // Extract qs, objQS
-  var objUrl=url.parse(req.url), qs=objUrl.query||'', objQS=parseQS2(qs);
+  var objUrl=new URL("http://trash.com"+req.url), pathNameOrg=objUrl.pathname, qs=objUrl.search;  //objQSNew=objUrlNew.searchParams;
+  var objQS=parseQS2(qs)
 
 
 
     // Extract siteName, wwwSite
   var domainName=req.headers.host; 
-  var pathNameOrg=objUrl.pathname
   var wwwReq=domainName+pathNameOrg;
 
   var {siteName,wwwSite}=Site.getSite(wwwReq);  
