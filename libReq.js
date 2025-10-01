@@ -409,8 +409,10 @@ app.reqDataDelete=async function(){  //
   var {req, res}=this, {objQS, uSite, siteName}=req;
 
   if(boDbgUseGetForFBAPI){
-    if(req.method=='GET'){ var objUrl=url.parse(req.url), qs=objUrl.query||'', strData=qs; } 
-    else {res.outCode(400, "Get request wanted"); return; }
+    if(req.method=='GET'){
+      //var objUrl=url.parse(req.url), qs=objUrl.query||'', strData=qs;
+      var objUrl=new URL('http://trash.com'+req.url), strData=objUrl.search.slice(1);
+    } else {res.outCode(400, "Get request wanted"); return; }
   }else {
     if(req.method=='POST'){
       //var strData=await app.getPost.call(this, req);
@@ -460,8 +462,10 @@ app.reqDeAuthorize=async function(){  //
   var {req, res}=this, {objQS, uSite, site}=req, {siteName}=site
 
   if(boDbgUseGetForFBAPI){
-    if(req.method=='GET'){ var objUrl=url.parse(req.url), qs=objUrl.query||'', strData=qs; } 
-    else {res.outCode(400, "Get request wanted"); return; }
+    if(req.method=='GET'){
+      //var objUrl=url.parse(req.url), qs=objUrl.query||'', strData=qs;
+      var objUrl=new URL('http://trash.com'+req.url), strData=objUrl.search.slice(1);
+    } else {res.outCode(400, "Get request wanted"); return; }
   }else {
     if(req.method=='POST'){
       //var strData=await app.getPost.call(this, req);
