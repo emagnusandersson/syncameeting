@@ -302,7 +302,9 @@ ReqBE.prototype.go=async function (){
   }
   else if(req.method=='GET'){
     this.mesEO(new Error('No GET requests please.'));  return; 
-    var objUrl=url.parse(req.url), qs=objUrl.query||''; jsonInput=urldecode(qs);
+    //var objUrl=url.parse(req.url), qs=objUrl.query||''; 
+    var objUrl=new URL("http://trash.com"+req.url), qs=objUrl.search.slice(1);
+    jsonInput=urldecode(qs);
   }
 
 
