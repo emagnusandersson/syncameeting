@@ -247,7 +247,7 @@ app.b64UrlDecode=function(b64UrlString, boUint8Array=false){  // boUint8Array==t
 }
 
 
-app.parseQS2=function(qs){
+app.parseQS=function(qs){
   var objQS={}, objTmp=new URLSearchParams(qs);
   for(const [name, value] of objTmp) {  objQS[name]=value;  }
   return objQS;

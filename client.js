@@ -55,9 +55,9 @@ globalThis.SelThemeCreate={
   strOS:'Same theme as OS', strLight:'Light theme', strDark:'Dark theme',
   factory:function(){
     var {strOS, strLight, strDark}=SelThemeCreate
-    var optSystem=createElement('option').myHtml('◩&nbsp;&nbsp;&nbsp;'+strOS).prop({value:'system'})  //⛅
-    var optLight=createElement('option').myHtml('☼&nbsp;&nbsp;&nbsp;'+strLight).prop({value:'light'})  //☼☀☀️◻◨
-    var optDark=createElement('option').myHtml('☽&nbsp;&nbsp;&nbsp;'+strDark).prop({value:'dark'})  //☾☽◼☁️🌙🌒 🌒
+    var optSystem=createElement('option').myHtml('◩&nbsp;&nbsp;&nbsp;&nbsp;'+strOS).prop({value:'system'})  //⛅
+    var optLight=createElement('option').myHtml('☼&nbsp;&nbsp;&nbsp;&nbsp;'+strLight).prop({value:'light'})  //☼☀☀️◻◨
+    var optDark=createElement('option').myHtml('☽&nbsp;&nbsp;&nbsp;&nbsp;'+strDark).prop({value:'dark'})  //☾☽◼☁️🌙🌒 🌒
     var Opt=SelThemeCreate.Opt=[optSystem, optLight, optDark]
     var el=createElement('select').myAppend(...Opt).on('change',function(e){
       localStorage.setItem('themeChoise', this.value);
@@ -1043,7 +1043,7 @@ var viewFrontExtend=function(el){
   })
   //var selectorOfTheme=selThemeCreate().css({color:'black', background:'lightgrey'}); initialSetupOfSelectorOfTheme(selectorOfTheme)
   var selectorOfTheme=SelThemeCreate.factory();  setThemeClass(); selectorOfTheme.setValue();
-  var strWidth=boIOS?"3.3em":"2.9em";  selectorOfTheme.css({width: strWidth});
+  var strWidth=boIOS?"3.3em":"2.8em";  selectorOfTheme.css({width: strWidth});
 
   var spanRed=createElement('span').css({"background":"#f00",border:'solid 1px', height:'1em', width:'1em', display:'inline-block', 'vertical-align':'bottom'}); //var(--border-color)
   var spanBusy=createElement('span').css({}).myAppend(spanRed,' = Busy'); 
